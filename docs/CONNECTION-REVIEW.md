@@ -43,4 +43,3 @@ Use streaming `TextDecoder` semantics or back off to the last complete UTF-8 seq
 - The RefAtlas compact catalog fields observed in the local sample (`id`, `doi`, `ti`, `yr`, `vn`, `au`, `src`, and tags) map into the current parser without copying the corpus.
 - Finite-number validation rejects overflowed Prism analysis values.
 - `node --test --test-isolation=none tests/attachments.test.mjs tests/research.test.mjs` passed all 13 tests. The default isolated runner failed in this sandbox with `spawn EPERM`; this was an environment process-spawn restriction, not a test assertion failure.
-

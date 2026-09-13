@@ -12,11 +12,11 @@
     {
       "binding": "DB",
       "database_name": "inno-workspace",
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "database_id": "90591907-01ee-466b-ad2d-9eb4ee915b3b",
       "migrations_dir": "worker/migrations"
     }
   ],
   "vars": {
-    "CORS_ORIGINS": ""
+    "CORS_ORIGINS": "https://innokaist.github.io"
   }
 }
