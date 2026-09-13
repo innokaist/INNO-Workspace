@@ -2,6 +2,10 @@
 
 파일을 연결해 조회하고, 작업의 맥락을 이어가는 개인 연구 작업실.
 
+[클라우드 작업실](https://inno-workspace-api.innokaist.workers.dev) · [GitHub Pages 화면](https://innokaist.github.io/INNO-Workspace/)
+
+클라우드는 개인 접근 토큰이 필요합니다. AI 실행은 로컬 Codex 또는 별도 연결한 Claude Routine에서 수행합니다.
+
 ## 실행
 
 Node.js 24 이상과 ChatGPT 구독으로 로그인한 Codex CLI가 필요합니다. 화면과 로컬 작업 기록만 사용하려면 Codex는 없어도 됩니다.

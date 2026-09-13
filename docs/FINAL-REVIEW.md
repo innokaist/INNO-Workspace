@@ -26,11 +26,15 @@ Originally, checkpoint status allowed only `running` or `completed`; no supporte
 
 A follow-up executable probe passed the complete sequence: actual `handleMcp(request_decision)` → waiting_user → stale completion rejected → user decide → ready → fresh execution generation. D1 implementation was checked for equivalent ownership and atomic update behavior. The coordinator reports the fresh full suite at 64/64 and a real Codex smoke pass; those full runs were performed by the coordinator, not repeated by this reviewer.
 
-### [P2] Routine artifact transport limit — partially resolved; character/byte mismatch remains
+### [P2] Routine artifact transport limit — resolved and regression-tested
 
-`server/http.mjs:39` and `worker/index.mjs:30` cap every request body, including `/mcp`, at 750,000 bytes. The reducer (`public/core/tasks.mjs:161`) now limits inline artifact content to 500,000 characters, and `docs/BACKEND-REPORT.md` documents both limits. This correctly bounds base64 binaries to approximately 375 KB decoded, making the former oversized-binary failure a documented product limit. However, multibyte UTF-8 text still passes reducer validation while exceeding the request limit: a follow-up probe accepted 300,000 Korean characters whose serialized action was 900,107 bytes. The MCP tool schema/description does not expose either limit to the Routine.
+`server/http.mjs:39` and `worker/index.mjs:30` cap every request body, including `/mcp`, at 750,000 bytes. The original artifact limit was larger, and the intermediate 500,000-character limit still accepted multibyte text exceeding that transport budget. The final reducer (`public/core/tasks.mjs:165`) measures `TextEncoder().encode(JSON.stringify(result)).byteLength` and rejects serialized artifact JSON over 500,000 UTF-8 bytes. This leaves room for the request envelope and covers multibyte text and JSON escaping. The MCP artifact description (`server/mcp.mjs:39`) now exposes this limit and the approximate 375 KB decoded base64 boundary.
 
-Bound the serialized content's UTF-8 bytes, leaving room for the JSON envelope, and expose the resulting inline limit in the MCP artifact description/schema and Routine instructions. Retain the explicit larger-file limitation rather than implying arbitrary PPTX/image transfer. Include a multibyte text regression; an ASCII-only reducer test does not verify transport compatibility.
+The added UTF-8 regression accepts 160,000 Korean characters and rejects 170,000. Reviewer rerun: `node --test --test-isolation=none --test-name-pattern='inline artifact' tests/engine.test.mjs` passes both targeted tests. The coordinator reports the final full suite at 65/65. Larger Routine files remain an explicit product limit, not supported arbitrary-size uploads.
+
+## Current assessment
+
+All concrete findings raised by this bounded review are resolved or represented by explicit supported-size limits. No unresolved critical or important finding remains from this review. This assessment covers the reviewed code and tests; external account provisioning and live cloud deployment remain subject to the limitations below.
 
 ## Non-findings and limits
 

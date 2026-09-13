@@ -16,7 +16,7 @@ Ruling: new dedicated repo inside the writable workspace isolates existing E: ap
 Ruling: SQLite/D1 replaces the candidate new Firestore task DB to share transactional code across local/cloud; existing Firebase adapters stay separate.
 Ruling: no Sites lifecycle because approved design explicitly uses GitHub/Cloudflare hosting for the integrated application.
 
-Task 1: implementation and verification complete; external cloud account configuration pending.
+Task 1: implementation and verification complete; Worker/D1 deployed and live persistence verified; Claude Routine not configured.
 Task 2: complete, including extraction/provenance review fixes.
 Task 3: complete with desktop/mobile browser checks and offline CAS fix.
-Task 4: GitHub repository created; publication and Cloudflare authorization in progress.
+Task 4: GitHub source and Pages published, Cloudflare Worker/D1 deployed. Live auth and persistence verified. Personal onboarding kept outside Git in .inno/CLOUD-ACCESS.md.
