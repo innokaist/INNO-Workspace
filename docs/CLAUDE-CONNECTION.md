@@ -11,7 +11,7 @@ Cloudflare는 기존 Bearer 인증 MCP를 그대로 제공합니다. Claude의 I
 ## 현재 진행
 
 - 프로젝트 2,113개 파일의 SHA-256 일치 검증 후 이전 완료.
-- INNO 전용 Claude 환경 생성 완료.
+- INNO 전용 Claude 환경 생성 완료. Routine에 해당 환경과 결과 반환 지침을 저장했습니다.
 - 자격 증명 이름·호스트·헤더 입력 완료, 사용자 시크릿 입력 대기.
 - Cloudflare Routine URL을 공식 fire 주소로 수정.
 - 결과 반환 CLI와 오류·한글 청크 경계 테스트 추가.
