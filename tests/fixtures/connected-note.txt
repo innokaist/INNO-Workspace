@@ -1,0 +1,3 @@
+INNO attachment test fixture.
+SOURCE_RETENTION_CANARY_20260913
+Power is measured in watts. Do not invent missing measurements.

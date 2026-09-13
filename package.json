@@ -1,0 +1,13 @@
+{
+  "name": "inno-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=24"},
+  "scripts": {
+    "start": "node server/index.mjs",
+    "test": "node --test --test-isolation=none tests/*.test.mjs",
+    "preview": "node scripts/preview.mjs",
+    "deploy": "npx wrangler deploy"
+  }
+}

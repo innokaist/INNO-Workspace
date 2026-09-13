@@ -1,0 +1,10 @@
+node_modules/
+.inno/
+.env
+.env.*
+!.env.example
+.dev.vars
+.wrangler/
+test-results/
+playwright-report/
+*.log
