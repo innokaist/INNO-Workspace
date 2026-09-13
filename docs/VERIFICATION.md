@@ -6,8 +6,8 @@
 - 데스크톱 1440×960, 모바일 390×844 브라우저에서 수평 넘침 없음, 작업 생성·링크 연결·일시정지·역할 편집·재접속 기록 유지 확인.
 - 동시 탭 생성/수정 충돌, SQLite/D1 CAS, 취소 후 늦은 결과 차단, 원본 내용 미저장, 안전한 파일 경로, 추출 한도와 UTF-8 경계 회귀 테스트 포함.
 - Office 파서는 실제 ZIP 라이브러리로 검증했습니다. PDF 파서 연결은 주입된 테스트 계약으로 검증했으며 실제 모든 PDF 글꼴/레이아웃을 보증하지 않습니다.
-- Claude Routine 실계정 실행 및 PC 종료 상태에서의 AI 작업은 아직 미검증입니다. Routine 연결이 필요합니다.
+- 2026-09-14 Claude Routine 실계정 왕복 실행 검증 성공. 생성 파일 2개와 최종 assistant 답변, completed 상태를 INNO API에서 확인했습니다. PC를 실제로 종료한 실험은 수행하지 않았습니다.
 - GitHub Pages 공개 UI HTTP 200 확인. Cloudflare Worker 배포 후 비인증 상태 조회 401, 인증 상태 조회 200, D1 작업 생성·일시정지·재조회 성공 (`CLOUD_DURABLE_TASK_PASS`). 같은 API를 사용하는 기기끼리 상태를 공유합니다.
-- 배포 서버: https://inno-workspace-api.innokaist.workers.dev . 현재 cloud=true, localCodex=false, claudeRoutine=false이며, 클라우드 AI 실행기가 연결되었다고 표시하지 않습니다.
+- 배포 서버: https://inno-workspace-api.innokaist.workers.dev . 2026-09-14 확인: cloud=true, localCodex=false, claudeRoutine=true.
 
 검토 결과: [FINAL-REVIEW.md](FINAL-REVIEW.md). 운영 범위 및 한도: [BACKEND-REPORT.md](BACKEND-REPORT.md).
