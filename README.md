@@ -65,7 +65,7 @@ ChatGPT 구독 인증을 사용합니다. API 키 인증은 실행 가능으로 
 
 [Claude 공식 Routine](https://code.claude.com/docs/en/routines)에서 API trigger를 활성화하고 발급받은 URL·토큰을 서버 환경변수에 설정합니다. 이 토큰은 모델 API 키가 아니라 해당 구독 Routine 실행용입니다. 지원 여부와 실행 한도는 계정에 따라 다릅니다. Routine은 PC 없이 클라우드에서 실행됩니다.
 
-Routine을 시작했다는 응답은 작업 완료가 아닙니다. 실제 결과를 기록하려면 Routine에 INNO MCP 연결과 [Routine 지침](docs/ROUTINE.md)을 설정해야 합니다. 추가 크레딧/유료 초과 사용을 활성화하지 마세요.
+Routine을 시작했다는 응답은 작업 완료가 아닙니다. 실제 결과를 기록하려면 Routine의 전용 환경에 INNO 호스트용 API 자격 증명과 [Routine 지침](docs/ROUTINE.md)을 설정해야 합니다. 추가 크레딧/유료 초과 사용을 활성화하지 마세요.
 
 ## 클라우드 배포
 
