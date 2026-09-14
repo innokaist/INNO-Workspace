@@ -214,3 +214,5 @@ node .inno/tools/npm/package/bin/npx-cli.js --yes wrangler@4 deploy
 [기록 통합 안내](RECORD-IMPORT.md): 데스크톱 로컬 DB 또는 JSON 내보내기에서 선택한 기록을 클라우드로 가져옵니다. 원본은 보존하고 동일 기록은 중복 생성하지 않습니다.
 
 중단 원인별 재개 방법은 [중단과 재개 안내](INTERRUPTION-RECOVERY.md)를 참고하세요. 작업 상세에 저장된 진행 내용과 중단 안내를 함께 표시합니다.
+
+장시간 실행의 로그 처리 상한과 결과 파일 보존 기준은 [실행 중 자원 누적 관리](RUNTIME-RESOURCES.md)를 참고하세요.
