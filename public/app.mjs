@@ -1,4 +1,5 @@
-import {WorkspaceClient,exportBundle,validateEndpoint} from './core/client.mjs';
+import {createRecordImportUI} from './record-import.mjs';
+import {WorkspaceClient,exportBundle,parseBundle,validateEndpoint} from './core/client.mjs';
 import {AttachmentSession} from './core/attachments.mjs';
 import {extractConnectedText} from './core/extract.mjs';
 import {INTEGRATIONS,parseRefAtlas,parsePrismReport,searchPapers} from './core/research.mjs';
@@ -10,6 +11,7 @@ const typeNames={general:'일반 작업',literature:'문헌 · 아이디어',ana
 const names={workspace:'작업실',research:'연구 자료',integrations:'연결 앱',usage:'사용량'};
 const session=new AttachmentSession();
 let client,activeId=null,view='workspace',draftAttachments=[],papers=[],prismReports=[],busy=false,refreshing=false,previewUrls=[],lastRendered='';
+const recordImports=createRecordImportUI({getClient:()=>client,onDone:()=>refresh()});
 const state=()=>client?.state||{tasks:[],capabilities:{},usage:[]};
 const current=()=>state().tasks.find(t=>t.id===activeId);
 const attachments=()=>current()?.attachments||draftAttachments;
@@ -60,6 +62,7 @@ function renderPlan(){
  $('artifacts').innerHTML=artifacts.length?artifacts.map(a=>`<div class="artifact-row" role="button" tabindex="0" data-artifact="${esc(a.id)}"><span>▤</span><div><strong>${esc(a.name)}</strong><small>${esc(a.mime||'text/plain')}</small></div><span>↓</span></div>`).join(''):'<p class="small-copy">생성된 결과물이 여기에 모입니다.</p>';
 }
 function renderControls(){
+ $('local-records-button').hidden=!state().capabilities?.localRecordImport;
  const t=current(),c=state().capabilities||{},provider=$('provider').value;const available=provider==='codex'?(c.localCodex||c.cloudCodex):c.claudeRoutine;
  const running=t?.status==='running'||t?.status==='claimed'||t?.status==='queued';const terminal=t?.status==='cancelled'||t?.status==='completed';
  $('run-button').disabled=!t||busy||running||terminal;
@@ -136,7 +139,8 @@ $('provider').onchange=renderControls;$('run-button').onclick=()=>guarded(run);$
 $('export-button').onclick=()=>exportRecords();$('settings-export').onclick=()=>exportRecords(true);
 $('settings-button').onclick=showSettings;$('connect-executor').onclick=showSettings;$('settings-form').onsubmit=configure;
 $('offline-button').onclick=()=>guarded(async()=>{client=new WorkspaceClient();sessionStorage.removeItem('inno-token');sessionStorage.removeItem('inno-remote');await client.refresh();activeId=null;lastRendered='';syncStatus();render();$('settings-dialog').close();toast('이 기기의 작업 보관함으로 전환했습니다. 서버 기록은 서버에 남아 있습니다.');});
-$('restore-button').onclick=()=>$('restore-input').click();$('restore-input').onchange=e=>guarded(async()=>{const file=e.target.files[0];if(!file)return;if(file.size>20*1024*1024)throw new Error('작업 기록 파일은 20 MB 이하여야 합니다.');const count=await client.restore(await file.text());render();toast(`${count}개 작업을 가져왔습니다. 원본은 다시 연결하세요.`);e.target.value='';});
+$('local-records-button').onclick=()=>guarded(()=>recordImports.fromLocal());
+$('restore-button').onclick=()=>$('restore-input').click();$('restore-input').onchange=e=>guarded(async()=>{const file=e.target.files[0];if(!file)return;if(file.size>20*1024*1024)throw new Error('작업 기록 파일은 20 MB 이하여야 합니다.');const text=await file.text();if(client.remote){await recordImports.fromBundle(parseBundle(text));e.target.value='';return;}const count=await client.restore(text);render();toast(`${count}개 작업을 가져왔습니다. 원본은 다시 연결하세요.`);e.target.value='';});
 $('edit-plan').onclick=()=>{$('plan-text').value=(current()?.plan||[]).map(x=>x.label||x.role).join('\n');openDialog('plan-dialog');};
 $('plan-form').onsubmit=e=>{e.preventDefault();guarded(async()=>{const labels=$('plan-text').value.split('\n').map(s=>s.trim()).filter(Boolean);if(!labels.length||labels.length>6)throw new Error('역할은 1개에서 6개 사이로 구성하세요.');await act('plan',{plan:labels.map((label,i)=>({id:`role-${i+1}`,role:label,label,status:'pending',instructions:label}))});$('plan-dialog').close();});};
 $('task-menu').onclick=()=>{if(!current())return;const t=current();$('preview-title').textContent='작업 기록';$('preview-content').innerHTML=`<pre>${esc(JSON.stringify(exportBundle({tasks:[t]}),null,2))}</pre>`;openDialog('preview-dialog');};
