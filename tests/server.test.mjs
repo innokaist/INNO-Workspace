@@ -672,3 +672,23 @@ test('SQLite remote session launch retains existing checkpoint',async t=>{
 });
 
 test('SQLite unavailable executor preserves verified progress',async t=>{const app=await fixture();t.after(()=>app.close());let task=app.store.createTask({prompt:'work'});task=app.store.applyAction(task.id,{action:'checkpoint',expectedVersion:task.version,content:'Verified stage one'});task=app.store.markWaiting(task.id,{expectedVersion:task.version,provider:'codex',reason:'unavailable'});assert.equal(task.checkpoint.content,'Verified stage one');assert.equal(task.checkpoint.failure.kind,'unavailable');});
+
+
+test('plain-answer execution removes only its empty run directory',async t=>{
+ const parent=await mkdtemp(path.join(tmpdir(),'inno-empty-run-'));t.after(()=>rm(parent,{recursive:true,force:true}));const directory=path.join(parent,'run');
+ const spawnProcess=()=>{const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();queueMicrotask(()=>{child.stdout.write(JSON.stringify({type:'item.completed',item:{type:'agent_message',text:'Verified answer'}})+'\n');child.emit('close',0);});return child;};
+ const runner=createCodexRunner({spawnProcess,runDirectory:()=>directory});const result=await runner.run({task:{id:'t',prompt:'work'}});assert.equal(result.content,'Verified answer');await assert.rejects(()=>readFile(path.join(directory,'missing')),{code:'ENOENT'});const {stat}=await import('node:fs/promises');await assert.rejects(()=>stat(directory),{code:'ENOENT'});
+});
+
+test('execution retains nonempty run directory even when answer has no artifact reference',async t=>{
+ const directory=await mkdtemp(path.join(tmpdir(),'inno-keep-run-'));t.after(()=>rm(directory,{recursive:true,force:true}));await writeFile(path.join(directory,'work.txt'),'work in progress');
+ const spawnProcess=()=>{const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();queueMicrotask(()=>{child.stdout.write(JSON.stringify({type:'item.completed',item:{type:'agent_message',text:'Verified answer'}})+'\n');child.emit('close',0);});return child;};
+ const runner=createCodexRunner({spawnProcess,runDirectory:()=>directory});await runner.run({task:{id:'t',prompt:'work'}});assert.equal(await readFile(path.join(directory,'work.txt'),'utf8'),'work in progress');
+});
+
+test('oversized output stops runner and waits for close before releasing execution',async()=>{
+ let closed=false,killed=false;const spawnProcess=()=>{const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>{killed=true;setImmediate(()=>{closed=true;child.emit('close',1);});};queueMicrotask(()=>child.stdout.write('x'.repeat(16*1024*1024+1)));return child;};
+ const runner=createCodexRunner({spawnProcess,ensureDirectory:()=>{}});await assert.rejects(()=>runner.run({task:{id:'t',prompt:'work'}}),{code:'OUTPUT_LIMIT'});assert.equal(killed,true);assert.equal(closed,true);
+});
+
+test('abort during output-limit teardown cannot release runner before process close',async()=>{const controller=new AbortController();let closed=false;const spawnProcess=()=>{const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>{queueMicrotask(()=>controller.abort());setImmediate(()=>{closed=true;child.emit('close',1);});};queueMicrotask(()=>child.stdout.write('x'.repeat(16*1024*1024+1)));return child;};const runner=createCodexRunner({spawnProcess,ensureDirectory:()=>{}});await assert.rejects(()=>runner.run({task:{id:'t',prompt:'work'},signal:controller.signal}));assert.equal(closed,true);});

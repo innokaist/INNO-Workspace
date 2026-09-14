@@ -1,7 +1,8 @@
+import {createEventCollector,createTailCollector} from './process-output.mjs';
 import {runnerError} from '../public/core/failures.mjs';
 import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
-import { readFile, realpath, stat } from 'node:fs/promises';
+import { readFile, realpath, stat, rmdir } from 'node:fs/promises';
 import path from 'node:path';
 
 const API_ENVIRONMENT_KEYS = new Set([
@@ -19,10 +20,10 @@ export function withoutApiEnvironment(processEnv = process.env) {
   return Object.fromEntries(Object.entries(processEnv).filter(([key]) => !API_ENVIRONMENT_KEYS.has(key.toUpperCase())));
 }
 
-function collectProcess(child, {input, signal} = {}) {
+function collectProcess(child, {input, signal, stdoutCollector=createTailCollector(1024*1024)} = {}) {
   return new Promise((resolve, reject) => {
-    let stdout = '';
-    let stderr = '';
+    const stderrCollector=createTailCollector();
+    let outputError;
     let settled = false;
     const cleanup = () => signal?.removeEventListener('abort', abort);
     const fail = error => {
@@ -32,6 +33,7 @@ function collectProcess(child, {input, signal} = {}) {
       reject(error);
     };
     const abort = () => {
+      if(outputError)return; // Already terminating; ownership stays busy until close.
       child.kill?.('SIGTERM');
       const error = new Error('execution aborted');
       error.name = 'AbortError';
@@ -39,14 +41,19 @@ function collectProcess(child, {input, signal} = {}) {
     };
     child.stdout?.setEncoding('utf8');
     child.stderr?.setEncoding('utf8');
-    child.stdout?.on('data', chunk => { stdout += chunk; });
-    child.stderr?.on('data', chunk => { stderr += chunk; });
+    child.stdout?.on('data', chunk => {
+      if(settled||outputError)return;
+      try{stdoutCollector.write(chunk);}catch(error){outputError=error;child.kill?.('SIGTERM');}
+    });
+    child.stderr?.on('data', chunk => { if(!settled&&!outputError)stderrCollector.write(chunk); });
     child.on('error', fail);
     child.on('close', (code, processSignal) => {
       if (settled) return;
+      if(outputError){fail(outputError);return;}
+      let stdout;try{stdout=stdoutCollector.finish();}catch(error){fail(error);return;}
       settled = true;
       cleanup();
-      resolve({code, signal: processSignal, stdout, stderr});
+      resolve({code, signal: processSignal, stdout, stderr:stderrCollector.finish()});
     });
     if (signal?.aborted) {
       abort();
@@ -309,7 +316,8 @@ export function createCodexRunner({
         windowsHide: true,
         stdio: ['pipe', 'pipe', 'pipe'],
       });
-      const result = await collectProcess(child, {input: taskPrompt(task, materials, {executionId, generation, managedDelivery}), signal});
+      const result = await collectProcess(child, {input: taskPrompt(task, materials, {executionId, generation, managedDelivery}), signal, stdoutCollector:createEventCollector()});
+      try {
       const parsed = parseCodexEvents(result.stdout);
       if (result.code !== 0) {
         // Only diagnostics are classified, never assistant messages or source excerpts.
@@ -325,6 +333,11 @@ export function createCodexRunner({
         artifacts: structured?.artifacts,
         usage: parsed.usage,
       };
+      } finally {
+        // Non-recursive: preserve every directory containing files or child folders.
+        // Cleanup is best effort and cannot turn a verified answer into a failure.
+        await rmdir(executionDirectory).catch(()=>{});
+      }
     },
   };
 }

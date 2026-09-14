@@ -39,3 +39,12 @@
 - Worker deployed version 2f552957-4c29-497a-8df4-77e31baeb7df.
 - Live authenticated synthetic task 4c69c65c-ea55-489e-b046-a28f014a4e08 verified checkpoint preservation, failure delivery idempotency, diagnostic exclusion, explicit resume; task cancelled afterward. AI invocations: zero.
 - Desktop bridge restarted while idle. Real quota exhaustion and autonomous quota-reset resumption were not tested or claimed; automatic AI replay remains disabled.
+
+## 2026-09-14 Bounded runtime output
+
+- 121 tests passed. New cases cover 10,000 tool events, final answer and usage retention, split Korean JSONL, bounded diagnostic suffix, oversized single record, earlier actionable errors, first terminal failure, abort during overflow termination, and empty-only directory cleanup.
+- Independent review found failure-selection and overflow/abort ordering regressions; both corrected and rechecked.
+- Worker deployed version ad42c9b0-ae56-4baf-8ed5-64d5a592a9f4; desktop bridge restarted while idle.
+- Real Codex subscription smoke task 262e7544-77a4-4fe4-9237-b05c80eb7251 completed with exact answer resource-check-ok, one persisted artifact, and zero remaining run folders for this task.
+- The event collector retained under 500 characters in the synthetic long-stream test. This is a retained-output assertion, not an end-to-end speed or total process memory benchmark.
+- Nonempty run directories remain intact. Child-process and tool memory/disk consumption are not globally capped by this change.
