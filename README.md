@@ -81,3 +81,7 @@ npm run preview
 추가 설치 없이 Node의 내장 테스트 러너를 사용합니다. PDF.js와 JSZip의 브라우저 배포 파일은 `public/vendor`에 포함되어 있으며 각 라이선스를 함께 제공합니다. 설치된 시스템 도구·계정에 의존하는 실제 Codex/Claude 실행과 클라우드 배포는 별도의 검증이 필요합니다.
 
 파일 형식 지원과 연결 계약은 [RESEARCH-INTEGRATIONS.md](docs/RESEARCH-INTEGRATIONS.md), 현재 검증 결과는 [VERIFICATION.md](docs/VERIFICATION.md)를 참고하세요.
+
+### 클라우드 작업을 데스크톱 Codex로 실행
+
+[데스크톱 연결 가이드](docs/DESKTOP-BRIDGE.md)를 따라 `Start INNO Cloud Bridge.cmd`를 실행하세요. 첨부 없는 클라우드 작업을 Codex로 실행하고 같은 클라우드 작업에서 결과를 확인할 수 있습니다.

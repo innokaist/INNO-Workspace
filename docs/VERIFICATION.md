@@ -11,3 +11,9 @@
 - 배포 서버: https://inno-workspace-api.innokaist.workers.dev . 2026-09-14 확인: cloud=true, localCodex=false, claudeRoutine=true.
 
 검토 결과: [FINAL-REVIEW.md](FINAL-REVIEW.md). 운영 범위 및 한도: [BACKEND-REPORT.md](BACKEND-REPORT.md).
+
+## 2026-09-14 데스크톱 연결 1차
+
+- 전체 테스트 81개 통과. 경쟁 실행·재전송·취소·자료 변경·만료·프로세스 잠금·HTTP 인증 경로 검증.
+- 실제 ChatGPT 구독 Codex 왕복 성공: 작업 602bf79f-9723-430b-9c6a-ec731e957925, 답변 INNO_CODEX_CLOUD_OK, final.md, completed 상태를 클라우드 API에서 확인.
+- 첨부 없는 클라우드 작업 지원. 원본 재연결, 기존 로컬 기록 이전, 장기 단절 복구는 후속 범위.

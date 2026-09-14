@@ -86,7 +86,7 @@ function taskPrompt(task, materials = [], ownership = {}) {
     `Task ID: ${task.id}`,
     ownership.executionId ? `Execution ID: ${ownership.executionId}` : '',
     Number.isInteger(ownership.generation) ? `Execution generation: ${ownership.generation}` : '',
-    ownership.executionId ? 'The current execution is already claimed. Use the INNO MCP tools with this execution ID and generation for checkpoints, plans, and artifacts; do not claim it again.' : '',
+    ownership.executionId && !ownership.managedDelivery ? 'The current execution is already claimed. Use the INNO MCP tools with this execution ID and generation for checkpoints, plans, and artifacts; do not claim it again.' : '',
     `Task type: ${task.type}`,
     `Task title: ${task.title}`,
     '',
@@ -105,6 +105,7 @@ function taskPrompt(task, materials = [], ownership = {}) {
     'Transient source excerpts:',
     sources,
     '',
+    ownership.managedDelivery ? 'The desktop bridge manages cloud checkpoints and delivery. Do not call remote INNO tools. Return the final answer and generated artifacts to the bridge.' : '',
     'Return either a plain final answer or one JSON object with this shape:',
     '{"summary":"user-facing answer","checkpoint":"verified progress","artifacts":[{"name":"file.ext","mime":"type/subtype","path":"relative/output/path"}]}',
     'For generated files, return a relative path inside this isolated run directory. Small text may instead use content plus encoding utf-8.',
@@ -263,6 +264,7 @@ export function createCodexRunner({
     return path.join(cwd, safe);
   },
   ensureDirectory = directory => mkdirSync(directory, {recursive: true}),
+  managedDelivery = false,
   mcpUrl,
   mcpToken,
 } = {}) {
@@ -306,7 +308,7 @@ export function createCodexRunner({
         windowsHide: true,
         stdio: ['pipe', 'pipe', 'pipe'],
       });
-      const result = await collectProcess(child, {input: taskPrompt(task, materials, {executionId, generation}), signal});
+      const result = await collectProcess(child, {input: taskPrompt(task, materials, {executionId, generation, managedDelivery}), signal});
       if (result.code !== 0) {
         const detail = result.stderr.trim().slice(-2_000);
         throw new Error(`Codex exited with code ${result.code}${detail ? `: ${detail}` : ''}`);

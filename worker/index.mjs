@@ -1,3 +1,4 @@
+import {CloudBridge} from './bridge.mjs';
 import { ConflictError, ValidationError, sanitizeMaterials } from '../public/core/tasks.mjs';
 import { handleMcp } from '../server/mcp.mjs';
 import { D1TaskStore } from './store.mjs';
@@ -119,11 +120,12 @@ export function createWorker({fetchFn = fetch} = {}) {
           if (!authorized(request, env)) return responseJson({error: 'unauthorized'}, 401, {...headers, 'www-authenticate': 'Bearer'});
         }
         const store = new D1TaskStore(env.DB);
+        const bridge = new CloudBridge(store);
         const hasRoutine = routineConfigured(env);
-        const capabilities = {localCodex: false, claudeRoutine: hasRoutine, cloud: true, connected: true};
+        const capabilities = {cloudCodex: true, localCodex: false, claudeRoutine: hasRoutine, cloud: true, connected: true};
 
         if (request.method === 'GET' && pathname === '/api/state') {
-          return responseJson(await store.getState(capabilities), 200, headers);
+          return responseJson({...await store.getState(capabilities), desktop: await bridge.presence()}, 200, headers);
         }
         if (request.method === 'POST' && pathname === '/api/tasks') {
           return responseJson({task: await store.createTask(await body(request))}, 201, headers);
@@ -136,6 +138,15 @@ export function createWorker({fetchFn = fetch} = {}) {
           const task = await store.applyAction(decodeURIComponent(actionMatch[1]), await body(request));
           return responseJson({task}, 200, headers);
         }
+        if (request.method === 'POST' && pathname === '/api/desktop/poll') {
+          return responseJson({claim: await bridge.claim()}, 200, headers);
+        }
+        const bridgeMatch=pathname.match(/^\/api\/desktop\/([^/]+)\/(renew|complete|fail)$/);
+        if(request.method==='POST'&&bridgeMatch){
+          const id=decodeURIComponent(bridgeMatch[1]), input=await body(request);
+          const task=bridgeMatch[2]==='renew'?await bridge.renew(id,input):bridgeMatch[2]==='complete'?await bridge.complete(id,input):await bridge.fail(id,input);
+          return responseJson({task},200,headers);
+        }
         const runMatch = pathname.match(/^\/api\/tasks\/([^/]+)\/run$/);
         if (request.method === 'POST' && runMatch) {
           const taskId = decodeURIComponent(runMatch[1]);
@@ -143,7 +154,8 @@ export function createWorker({fetchFn = fetch} = {}) {
           if (!['codex', 'claude'].includes(input.provider)) throw new ValidationError('provider must be codex or claude');
           if (!Number.isInteger(input.expectedVersion)) throw new ValidationError('expectedVersion is required');
           const materials = sanitizeMaterials(input.materials);
-          if (input.provider !== 'claude' || !hasRoutine) {
+          if (input.provider === 'codex') return responseJson({task:await bridge.enqueue(taskId,{...input,materials})},202,headers);
+          if (!hasRoutine) {
             const task = await store.markWaiting(taskId, {
               expectedVersion: input.expectedVersion,
               provider: input.provider,
