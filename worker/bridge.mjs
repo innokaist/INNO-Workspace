@@ -2,6 +2,15 @@ import {ConflictError,ValidationError} from '../public/core/tasks.mjs';
 
 export class CloudBridge {
   constructor(store){this.store=store;}
+  async start(id,input){
+    const t=await this.store.requireTask(id);
+    if(!['ready','failed','waiting_connection','waiting_quota'].includes(t.status))throw new ConflictError('Task must be ready before direct execution.',t.version);
+    if(t.attachments.some(a=>a.source==='url'))throw new ValidationError('URL references are not source content. Connect the required document before direct execution.');
+    const names=t.attachments.filter(a=>a.source!=='url').map(a=>a.path||a.name).sort();
+    if(!Array.isArray(input.sourceNames)||input.sourceNames.length>20||input.sourceNames.some(n=>typeof n!=='string')||JSON.stringify([...input.sourceNames].sort())!==JSON.stringify(names))throw new ValidationError('Reconnect every required source on this desktop.');
+    const claim=await this.store.claimExecution(id,{provider:'codex',expectedVersion:input.expectedVersion,leaseMs:120000});
+    await this.seen();return claim;
+  }
   async enqueue(id,input){
     if(input.materials?.length)throw new ValidationError('Desktop source transfer is not connected. Reconnect sources on the desktop; source content is never queued.');
     return this.store.replaceTask(id,input.expectedVersion,t=>{
@@ -13,7 +22,7 @@ export class CloudBridge {
   async claim(){
     await this.seen();
     const expired=await this.store.db.prepare("SELECT body FROM tasks WHERE json_extract(body,'$.status')='running' AND json_extract(body,'$.checkpoint.provider')='codex' AND json_extract(body,'$.checkpoint.expiresAt') < ?1 ORDER BY updated_at ASC LIMIT 1").bind(this.store.now()).first();
-    if(expired){const t=JSON.parse(expired.body);try{await this.store.replaceTask(t.id,t.version,current=>({...current,status:'paused',version:current.version+1,updatedAt:this.store.now(),checkpoint:{...current.checkpoint,status:'paused',content:'Desktop connection expired. Review saved progress before explicitly resuming.'}}));}catch(e){if(!(e instanceof ConflictError))throw e;}}
+    if(expired){const t=JSON.parse(expired.body);try{await this.store.replaceTask(t.id,t.version,current=>({...current,status:'paused',version:current.version+1,updatedAt:this.store.now(),checkpoint:{...current.checkpoint,status:'paused',interruptedBy:'lease_expiry',interruptedVersion:current.version+1,content:'Desktop connection expired. A saved result can still be delivered if this task remains unchanged.'}}));}catch(e){if(!(e instanceof ConflictError))throw e;}}
     const row=await this.store.db.prepare("SELECT body FROM tasks WHERE json_extract(body,'$.status')='queued' ORDER BY updated_at ASC LIMIT 1").first();
     if(!row)return null;
     const t=JSON.parse(row.body);
@@ -41,10 +50,11 @@ export class CloudBridge {
     return this.store.failExecution(id,input);
   }
   async complete(id,input){
-    const t=await this.store.requireTask(id);
-    if(t.status==='completed'&&t.checkpoint?.executionId===input.executionId&&t.checkpoint?.generation===input.generation)return t;
-    this.store.assertExecution(t,input);
-    if(Date.parse(t.checkpoint.expiresAt)<=Date.parse(this.store.now()))throw new ConflictError('Execution lease expired',t.version);
-    return this.store.finishExecution(id,input);
+    for(let attempt=0;attempt<3;attempt++){
+      const t=await this.store.requireTask(id);
+      if(t.status==='completed'&&t.checkpoint?.executionId===input.executionId&&t.checkpoint?.generation===input.generation)return t;
+      try{return await this.store.finishExecution(id,input,{recoverInterrupted:true});}
+      catch(e){if(!(e instanceof ConflictError)||attempt===2)throw e;}
+    }
   }
 }

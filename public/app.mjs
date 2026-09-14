@@ -64,15 +64,15 @@ function renderControls(){
  const running=t?.status==='running'||t?.status==='claimed'||t?.status==='queued';const terminal=t?.status==='cancelled'||t?.status==='completed';
  $('run-button').disabled=!t||busy||running||terminal;
  $('run-button').innerHTML=`${t?.status==='queued'?'데스크톱 실행 대기':running?'실행 중':t?.status==='paused'?'이어서 실행':'작업 실행'} <span>↗</span>`;
- $('executor-status').textContent=client?.remote?(available?provider==='codex'?(c.cloudCodex?(state().desktop?.online?'데스크톱 연결됨 · 같은 클라우드 작업에 결과를 저장합니다.':'데스크톱 오프라인 · 실행 요청을 대기열에 보관합니다.'):'이 서버의 Codex 구독으로 실행합니다.'):'연결된 클라우드 Routine으로 실행합니다.':provider==='codex'?'이 서버에 Codex 실행기가 연결되지 않았습니다.':'서버에 Claude Routine 설정이 필요합니다.'):'실행기를 연결하세요. 현재는 작업을 기록할 수 있습니다.';
+ $('executor-status').textContent=client?.remote?(available?provider==='codex'?(c.desktopSources?'같은 클라우드 작업 · 선택한 원본은 이 PC에서만 Codex에 전달합니다.':c.cloudCodex?(state().desktop?.online?'데스크톱 연결됨 · 같은 클라우드 작업에 결과를 저장합니다.':'데스크톱 오프라인 · 실행 요청을 대기열에 보관합니다.'):'이 서버의 Codex 구독으로 실행합니다.'):'연결된 클라우드 Routine으로 실행합니다.':provider==='codex'?'이 서버에 Codex 실행기가 연결되지 않았습니다.':'서버에 Claude Routine 설정이 필요합니다.'):'실행기를 연결하세요. 현재는 작업을 기록할 수 있습니다.';
  $('pause-button').disabled=!t||busy||terminal||t.status==='paused';$('cancel-button').disabled=!t||busy||terminal;
  $('edit-plan').disabled=!t||busy||running||terminal;
  $('prompt').placeholder=t?t.status==='waiting_user'?'선택 또는 수정 요청을 남겨주세요.':'추가 요청이나 방향을 남겨주세요.':'어떤 작업을 함께할까요?';
  $('composer').querySelector('[type=submit]').disabled=busy||running||t?.status==='cancelled';
 }
-function syncStatus(error){const s=$('sync-status');s.className='sync-badge';if(error){s.textContent='연결 오류 · 변경 미동기화';s.classList.add('error');return;}if(client?.remote){s.textContent=`동기화 ${client.lastSync?new Date(client.lastSync).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):''}`;s.classList.add('connected');$('connection-label').textContent='서버 연결됨';}else{s.textContent='이 기기 보관';$('connection-label').textContent='이 기기 보관';}}
+function syncStatus(error){const s=$('sync-status');s.className='sync-badge';if(error){s.textContent='연결 오류 · 변경 미동기화';s.classList.add('error');return;}if(client?.remote){s.textContent=`동기화 ${client.lastSync?new Date(client.lastSync).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):''}`;s.classList.add('connected');$('connection-label').textContent=state().capabilities?.desktopSources?'클라우드 + 이 PC 자료':'서버 연결됨';}else{s.textContent='이 기기 보관';$('connection-label').textContent='이 기기 보관';}}
 function render(){renderList();renderMessages();renderAttachments();renderPlan();renderControls();if(view==='usage')renderUsage();}
-async function refresh(){if(refreshing||!client)return;refreshing=true;try{await client.refresh();syncStatus();render();}catch(e){syncStatus(e);}finally{refreshing=false;}}
+async function refresh(){if(refreshing||!client)return;refreshing=true;const viewKey=()=>JSON.stringify([state().revision,state().capabilities,state().desktop?.online,state().localDesktop]);const before=viewKey();try{await client.refresh();syncStatus();if(before!==viewKey())render();else renderControls();}catch(e){syncStatus(e);}finally{refreshing=false;}}
 async function act(action,extra={}){const t=current();if(!t)return;await client.action(t.id,{action,expectedVersion:t.version,...extra});render();}
 async function updateAttachments(next){if(current())await act('attachments',{attachments:next});else{draftAttachments=next;renderAttachments();}}
 async function addFiles(files){const added=session.addFiles(files);const merged=new Map(attachments().map(a=>[a.id,a]));for(const a of added)merged.set(a.id,a);await updateAttachments([...merged.values()]);toast(`${added.length}개 파일을 연결했습니다. 원본은 업로드하지 않았습니다.`);}
@@ -95,7 +95,8 @@ async function run(){
  const t=current();if(!t)return;
  const c=state().capabilities||{},provider=$('provider').value;
  if(!client.remote||(provider==='codex'?!(c.localCodex||c.cloudCodex):!c.claudeRoutine)){showSettings();toast('선택한 AI 실행기가 연결된 서버를 설정하세요.');return;}
- if(provider==='codex'&&c.cloudCodex&&t.attachments?.length)throw new Error('클라우드 Codex의 원본 재연결 기능을 준비 중입니다. 첨부 작업은 현재 Claude 실행 또는 로컬 전용 모드를 사용하세요.');
+ if(provider==='codex'&&c.cloudCodex&&!c.desktopSources&&t.attachments?.length)throw new Error('이 PC의 데스크톱 연결 화면에서 같은 작업을 열고 원본을 다시 연결하세요. 휴대폰에서 PC 원본을 직접 읽을 수는 없습니다.');
+ if(provider==='codex'&&c.desktopSources&&t.attachments?.some(a=>a.source==='url'))throw new Error('링크만으로 원문을 읽을 수는 없습니다. 해당 문서 파일을 연결한 뒤 링크 참조를 해제하세요.');
  const missing=(t.attachments||[]).filter(a=>a.source!=='url'&&!connected(a));if(missing.length)throw new Error(`${missing.length}개 원본의 연결이 끊겼습니다. 파일 또는 폴더를 다시 연결하세요.`);
  const materials=[];let total=0;const unsupported=[];
  for(const a of t.attachments||[]){if(a.source==='url')continue;const r=await extractConnectedText(await session.getFile(a.id),{maxChars:Math.min(200000,600000-total)});if(r.status==='unavailable'){unsupported.push(a.name);continue;}if(r.status==='truncated')throw new Error(`${a.name}은 텍스트 전송 범위를 초과합니다. 필요한 부분을 별도 텍스트로 연결하세요. 자동으로 잘라 분석하지 않습니다.`);total+=new TextEncoder().encode(r.text).byteLength;materials.push({name:a.path||a.name,text:r.text});if(total>600000)throw new Error('한 번에 조회할 텍스트 범위를 초과했습니다. 자료를 나눠 연결하세요.');}
