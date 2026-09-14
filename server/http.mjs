@@ -1,3 +1,4 @@
+import {failureInput,runnerError} from '../public/core/failures.mjs';
 import { createReadStream } from 'node:fs';
 import { realpath, stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -156,8 +157,7 @@ export function createInnoServer({
           store.failExecution(taskId, {
             executionId: claim.executionId,
             generation: claim.generation,
-            error: error instanceof Error ? error.message : String(error),
-            status: error?.code === 'QUOTA_EXCEEDED' ? 'waiting_quota' : 'failed',
+            ...failureInput(error?.code ? error : runnerError(error)),
           });
         }
       } finally {

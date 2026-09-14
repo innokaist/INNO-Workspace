@@ -29,3 +29,13 @@
 - 실제 로컬 SQLite 조회 결과 이전 대상 0개. 사용자 기록을 불필요하게 복제하지 않았습니다.
 - 실서버 검증 작업 912ad111-80fc-4b89-a02b-bf050c4c5a61: 첫 가져오기 created, 반복 skipped, 변경된 같은 ID conflict 확인. 결과 파일 보존 및 첨부 원본 확인 문자열 비저장 확인.
 - 메모리 전용 UI에서 기존 로컬 기록 선택 → 체크 → 가져오기 → 가져옴 1 표시 확인.
+
+## 2026-09-14 Interruption recovery
+
+- 111 Node tests passed using node --test --test-isolation=none tests/*.test.mjs.
+- Red-first regressions: Codex nonzero quota event, safe Claude 401/429, SQLite/D1 checkpoint preservation, native network errors, result retry without duplicate AI invocation.
+- Independent review identified unavailable-runner checkpoint overwrite and coded-network bypass; both fixed and rechecked.
+- Browser fixture: saved progress and separate quota guidance visible; fixture server and tab removed afterward.
+- Worker deployed version 2f552957-4c29-497a-8df4-77e31baeb7df.
+- Live authenticated synthetic task 4c69c65c-ea55-489e-b046-a28f014a4e08 verified checkpoint preservation, failure delivery idempotency, diagnostic exclusion, explicit resume; task cancelled afterward. AI invocations: zero.
+- Desktop bridge restarted while idle. Real quota exhaustion and autonomous quota-reset resumption were not tested or claimed; automatic AI replay remains disabled.

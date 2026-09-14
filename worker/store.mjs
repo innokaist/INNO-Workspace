@@ -1,3 +1,4 @@
+import {failureRecord} from '../public/core/failures.mjs';
 import {
   ConflictError,
   ValidationError,
@@ -132,7 +133,7 @@ export class D1TaskStore {
       const now = this.now();
       return {
         ...current, status: 'waiting_connection', version: current.version + 1, updatedAt: now,
-        checkpoint: {...(current.checkpoint ?? {}), provider, status: 'waiting_connection', content: reason, updatedAt: now},
+        checkpoint: {...(current.checkpoint ?? {}), provider, status: 'waiting_connection', content: current.checkpoint?.content ?? reason, failure: failureRecord({failure:{kind:'unavailable'}},now), updatedAt: now},
       };
     });
   }
@@ -158,7 +159,7 @@ export class D1TaskStore {
       return {
         ...current, status: 'running', version: current.version + 1, updatedAt: now,
         checkpoint: {
-          ...previous, ...claim, provider, status: 'running', claimedAt: now,
+          ...previous, failure: undefined, ...claim, provider, status: 'running', claimedAt: now,
           expiresAt: new Date(nowMs + leaseMs).toISOString(), updatedAt: now,
         },
       };
@@ -208,7 +209,7 @@ export class D1TaskStore {
         ...current, status: 'completed', version: current.version + 1, updatedAt: now,
         messages: [...current.messages, {id: this.id(), role: 'assistant', content, createdAt: now}],
         artifacts: [...current.artifacts, ...artifacts],
-        checkpoint: {...current.checkpoint, status: 'completed', content: input.checkpoint ?? 'Execution completed.', completedAt: now, updatedAt: now},
+        checkpoint: {...current.checkpoint, failure: undefined, status: 'completed', content: input.checkpoint ?? 'Execution completed.', completedAt: now, updatedAt: now},
       };
     });
   }
@@ -220,7 +221,7 @@ export class D1TaskStore {
       const now = this.now();
       return {
         ...current, status: 'running', version: current.version + 1, updatedAt: now,
-        checkpoint: {...current.checkpoint, status: 'running', content: input.checkpoint, sessionUrl: input.sessionUrl, updatedAt: now},
+        checkpoint: {...current.checkpoint, status: 'running', content: current.checkpoint?.content ?? input.checkpoint, sessionUrl: input.sessionUrl, updatedAt: now},
       };
     });
   }
@@ -230,10 +231,11 @@ export class D1TaskStore {
     return this.replaceTask(id, snapshot.version, current => {
       this.assertExecution(current, input);
       const now = this.now();
-      const status = input.status === 'waiting_quota' ? 'waiting_quota' : 'failed';
+      const failure = failureRecord(input, now);
+      const status = failure.kind === 'quota' ? 'waiting_quota' : failure.kind === 'authentication' ? 'waiting_connection' : 'failed';
       return {
         ...current, status, version: current.version + 1, updatedAt: now,
-        checkpoint: {...current.checkpoint, status, content: String(input.error || 'Execution failed.').slice(0, 4_000), updatedAt: now},
+        checkpoint: {...current.checkpoint, status, failure, updatedAt: now},
       };
     });
   }

@@ -50,3 +50,33 @@ test('URL-only direct task cannot pretend its source was supplied',async()=>{con
 test('new user input after expiry fences saved output recovery',async()=>{const {bridge,store,task}=await fixture();await bridge.enqueue(task.id,{expectedVersion:1});const c=await bridge.claim();store.now=()=>new Date(Date.now()+180000).toISOString();await bridge.claim();const t=await store.requireTask(task.id);await store.applyAction(task.id,{action:'message',expectedVersion:t.version,content:'Changed request'});await assert.rejects(()=>bridge.complete(task.id,{...c,content:'obsolete'}));});
 
 test('expiry transition racing completion is refetched without duplicate delivery',async()=>{const {bridge,store,task}=await fixture();await bridge.enqueue(task.id,{expectedVersion:1});const c=await bridge.claim();const replace=store.replaceTask.bind(store);let inject=true;store.replaceTask=async(id,version,update)=>{if(inject){inject=false;await replace(id,version,t=>({...t,status:'paused',version:t.version+1,updatedAt:store.now(),checkpoint:{...t.checkpoint,interruptedBy:'lease_expiry',interruptedVersion:t.version+1}}));}return replace(id,version,update);};await bridge.complete(task.id,{...c,content:'saved'});assert.equal((await store.requireTask(task.id)).messages.filter(m=>m.role==='assistant').length,1);});
+
+
+test('D1 interruption preserves checkpoint and authentication failure delivery is idempotent',async()=>{
+ const {store,bridge,task}=await fixture();let t=await store.applyAction(task.id,{action:'checkpoint',expectedVersion:task.version,content:'Verified stage one'});
+ const c=await store.claimExecution(t.id,{provider:'codex',expectedVersion:t.version});
+ const input={executionId:c.executionId,generation:c.generation,failure:{kind:'authentication'},status:'waiting_connection',error:'PRIVATE_DIAGNOSTIC'};
+ t=await bridge.fail(t.id,input);const duplicate=await bridge.fail(t.id,input);
+ assert.equal(t.status,'waiting_connection');assert.equal(t.version,duplicate.version);assert.equal(t.checkpoint.content,'Verified stage one');assert.equal(t.checkpoint.failure.kind,'authentication');assert.equal(JSON.stringify(t).includes('PRIVATE_DIAGNOSTIC'),false);
+});
+
+test('D1 lease expiry retains verified progress',async()=>{
+ const {store,bridge,task}=await fixture();let t=await store.applyAction(task.id,{action:'checkpoint',expectedVersion:task.version,content:'Verified stage one'});
+ const c=await store.claimExecution(t.id,{provider:'codex',expectedVersion:t.version,leaseMs:1000});store.now=()=>new Date(Date.now()+3000).toISOString();await bridge.claim();t=await store.requireTask(t.id);
+ assert.equal(t.status,'paused');assert.equal(t.checkpoint.content,'Verified stage one');assert.equal(t.checkpoint.failure.kind,'interrupted');
+});
+
+
+test('Worker quota response keeps progress and does not dispatch another session',async()=>{
+ const db=new TestD1Database(),store=new D1TaskStore(db);let calls=0;const worker=createWorker({fetchFn:async()=>{calls++;return new Response(JSON.stringify({error:{message:'PRIVATE_DIAGNOSTIC'}}),{status:429,headers:{'Retry-After':'60'}});}});
+ const env={DB:db,ACCESS_TOKEN:'test-secret-01234567890123456789',CLAUDE_ROUTINE_TOKEN:'test',CLAUDE_ROUTINE_URL:'https://api.anthropic.com/routines/test/fire'};
+ let t=await store.createTask({prompt:'work'});t=await store.applyAction(t.id,{action:'checkpoint',expectedVersion:t.version,content:'Verified stage one'});const pending=[];
+ const res=await worker.fetch(new Request('https://inno.example/api/tasks/'+t.id+'/run',{method:'POST',headers:{authorization:'Bearer '+env.ACCESS_TOKEN,'content-type':'application/json'},body:JSON.stringify({provider:'claude',expectedVersion:t.version})}),env,{waitUntil:p=>pending.push(p)});
+ assert.equal(res.status,202);await Promise.all(pending);t=await store.requireTask(t.id);assert.equal(t.status,'waiting_quota');assert.equal(t.checkpoint.content,'Verified stage one');assert.equal(t.checkpoint.failure.automaticRetry,false);assert.ok(t.checkpoint.failure.retryNotBefore);assert.equal(JSON.stringify(t).includes('PRIVATE_DIAGNOSTIC'),false);assert.equal(calls,1);
+});
+
+test('D1 remote session launch retains existing checkpoint',async()=>{
+ const {store,task}=await fixture();let t=await store.applyAction(task.id,{action:'checkpoint',expectedVersion:task.version,content:'Verified stage one'});const c=await store.claimExecution(t.id,{provider:'claude',expectedVersion:t.version});t=await store.leaveExecutionRunning(t.id,{...c,sessionUrl:'https://claude.ai/code/test',checkpoint:'Session started'});assert.equal(t.checkpoint.content,'Verified stage one');
+});
+
+test('D1 unavailable executor preserves verified progress',async()=>{const {store,task}=await fixture();let t=await store.applyAction(task.id,{action:'checkpoint',expectedVersion:task.version,content:'Verified stage one'});t=await store.markWaiting(t.id,{expectedVersion:t.version,provider:'claude',reason:'unavailable'});assert.equal(t.checkpoint.content,'Verified stage one');assert.equal(t.checkpoint.failure.kind,'unavailable');});
