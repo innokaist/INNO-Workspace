@@ -1,4 +1,4 @@
-const CACHE='inno-shell-v3';
+const CACHE='inno-shell-v4';
 const FILES=['./','./index.html','./styles.css','./app.mjs','./icon.svg','./manifest.webmanifest','./core/client.mjs','./core/tasks.mjs','./core/attachments.mjs','./core/research.mjs','./core/extract.mjs'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));

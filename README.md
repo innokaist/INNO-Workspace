@@ -84,4 +84,4 @@ npm run preview
 
 ### 클라우드 작업을 데스크톱 Codex로 실행
 
-[데스크톱 연결 가이드](docs/DESKTOP-BRIDGE.md)를 따라 `Start INNO Cloud Bridge.cmd`를 실행하세요. 첨부 없는 클라우드 작업을 Codex로 실행하고 같은 클라우드 작업에서 결과를 확인할 수 있습니다.
+[데스크톱 연결 가이드](docs/DESKTOP-BRIDGE.md)를 따라 `Start INNO Cloud Bridge.cmd`를 실행하세요. 첨부 없는 클라우드 작업 또는 데스크톱 화면에서 원본을 재연결한 작업을 Codex로 실행하고, 같은 클라우드 작업에서 결과를 확인할 수 있습니다.

@@ -141,9 +141,10 @@ export function createWorker({fetchFn = fetch} = {}) {
         if (request.method === 'POST' && pathname === '/api/desktop/poll') {
           return responseJson({claim: await bridge.claim()}, 200, headers);
         }
-        const bridgeMatch=pathname.match(/^\/api\/desktop\/([^/]+)\/(renew|complete|fail)$/);
+        const bridgeMatch=pathname.match(/^\/api\/desktop\/([^/]+)\/(start|renew|complete|fail)$/);
         if(request.method==='POST'&&bridgeMatch){
           const id=decodeURIComponent(bridgeMatch[1]), input=await body(request);
+          if(bridgeMatch[2]==='start')return responseJson({claim:await bridge.start(id,input)},200,headers);
           const task=bridgeMatch[2]==='renew'?await bridge.renew(id,input):bridgeMatch[2]==='complete'?await bridge.complete(id,input):await bridge.fail(id,input);
           return responseJson({task},200,headers);
         }

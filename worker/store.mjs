@@ -173,10 +173,16 @@ export class D1TaskStore {
     ) throw new ConflictError('stale execution owner cannot write this task', task.version);
   }
 
-  async finishExecution(id, input) {
+  async finishExecution(id, input, {recoverInterrupted = false} = {}) {
     const snapshot = await this.requireTask(id);
     return this.replaceTask(id, snapshot.version, current => {
-      this.assertExecution(current, input);
+      const sameInterruptedOwner = recoverInterrupted
+        && current.status === 'paused'
+        && current.checkpoint?.interruptedBy === 'lease_expiry'
+        && current.checkpoint?.interruptedVersion === current.version
+        && current.checkpoint?.executionId === input.executionId
+        && current.checkpoint?.generation === input.generation;
+      if (!sameInterruptedOwner) this.assertExecution(current, input);
       const now = this.now();
       const content = typeof input.content === 'string' ? input.content.trim() : '';
       if (!content) throw new ValidationError('execution result content is required');
