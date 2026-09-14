@@ -7,7 +7,7 @@ import path from 'node:path';
 const MIME={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
 const json=(res,status,data)=>{res.writeHead(status,{'content-type':'application/json','cache-control':'no-store'});res.end(JSON.stringify(data));};
 async function body(req){let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>750000)throw Object.assign(Error('Request exceeds 750000 bytes'),{status:413});chunks.push(chunk);}try{return JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}');}catch{throw Object.assign(Error('Invalid JSON'),{status:400});}}
-export function createDesktopServer({token,publicDir,request,bridge}){
+export function createDesktopServer({token,publicDir,request,bridge,localRecords}){
  if(typeof token!=='string'||token.length<24)throw Error('A strong local token is required');
  const root=path.resolve(publicDir instanceof URL?fileURLToPath(publicDir):publicDir);
  const server=createServer(async(req,res)=>{
@@ -19,7 +19,13 @@ export function createDesktopServer({token,publicDir,request,bridge}){
    if(p.startsWith('/api/')){
     const expected=Buffer.from('Bearer '+token),actual=Buffer.from(req.headers.authorization||'');
     if(actual.length!==expected.length||!timingSafeEqual(actual,expected))return json(res,401,{error:'unauthorized'});
-    if(req.method==='GET'&&p==='/api/state'){const state=await request(p);return json(res,200,{...state,capabilities:{...state.capabilities,desktopSources:true},localDesktop:bridge.status()});}
+    if(req.method==='GET'&&p==='/api/state'){const state=await request(p);return json(res,200,{...state,capabilities:{...state.capabilities,desktopSources:true,localRecordImport:!!localRecords},localDesktop:bridge.status()});}
+    if(localRecords&&req.method==='GET'&&p==='/api/local-records')return json(res,200,await localRecords.list(url.searchParams.get('cursor')||''));
+    if(localRecords&&req.method==='POST'&&p==='/api/local-records/import'){
+     const input=await body(req);const task=await localRecords.read(input.id,input.hash);
+     return json(res,200,await request('/api/imports',{task,copy:input.copy??false}));
+    }
+    if(req.method==='POST'&&p==='/api/imports')return json(res,200,await request(p,await body(req)));
     const run=p.match(/^\/api\/tasks\/([^/]+)\/run$/);
     if(req.method==='POST'&&run){const input=await body(req);if(input.provider==='codex')return json(res,202,{task:await bridge.startTask(decodeURIComponent(run[1]),input)});if(input.provider==='claude')return json(res,202,await request(p,input));return json(res,400,{error:'Invalid provider'});}
     if(req.method==='POST'&&(p==='/api/tasks'||/^\/api\/tasks\/[^/]+\/actions$/.test(p)))return json(res,p==='/api/tasks'?201:200,await request(p,await body(req)));

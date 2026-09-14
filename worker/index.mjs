@@ -1,3 +1,4 @@
+import {RecordImporter} from './imports.mjs';
 import {CloudBridge} from './bridge.mjs';
 import { ConflictError, ValidationError, sanitizeMaterials } from '../public/core/tasks.mjs';
 import { handleMcp } from '../server/mcp.mjs';
@@ -126,6 +127,9 @@ export function createWorker({fetchFn = fetch} = {}) {
 
         if (request.method === 'GET' && pathname === '/api/state') {
           return responseJson({...await store.getState(capabilities), desktop: await bridge.presence()}, 200, headers);
+        }
+        if (request.method === 'POST' && pathname === '/api/imports') {
+          const input=await body(request);return responseJson(await new RecordImporter(store).import(input.task,{copy:input.copy??false}),200,headers);
         }
         if (request.method === 'POST' && pathname === '/api/tasks') {
           return responseJson({task: await store.createTask(await body(request))}, 201, headers);

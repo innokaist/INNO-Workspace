@@ -209,3 +209,6 @@ node .inno/tools/npm/package/bin/npx-cli.js --yes wrangler@4 deploy
 ## 데스크톱과 클라우드 작업 연결 (2026-09-14)
 
 [데스크톱 연결 가이드](DESKTOP-BRIDGE.md)를 참고하세요. 기존 로컬 전용 기록과 별도로, 클라우드에서 만든 첨부 없는 작업은 데스크톱 Codex가 처리하고 결과를 클라우드로 반환할 수 있습니다.
+
+## 기존 기록 통합
+[기록 통합 안내](RECORD-IMPORT.md): 데스크톱 로컬 DB 또는 JSON 내보내기에서 선택한 기록을 클라우드로 가져옵니다. 원본은 보존하고 동일 기록은 중복 생성하지 않습니다.
