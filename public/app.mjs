@@ -60,11 +60,11 @@ function renderPlan(){
  $('artifacts').innerHTML=artifacts.length?artifacts.map(a=>`<div class="artifact-row" role="button" tabindex="0" data-artifact="${esc(a.id)}"><span>▤</span><div><strong>${esc(a.name)}</strong><small>${esc(a.mime||'text/plain')}</small></div><span>↓</span></div>`).join(''):'<p class="small-copy">생성된 결과물이 여기에 모입니다.</p>';
 }
 function renderControls(){
- const t=current(),c=state().capabilities||{},provider=$('provider').value;const available=provider==='codex'?c.localCodex:c.claudeRoutine;
- const running=t?.status==='running'||t?.status==='claimed';const terminal=t?.status==='cancelled'||t?.status==='completed';
+ const t=current(),c=state().capabilities||{},provider=$('provider').value;const available=provider==='codex'?(c.localCodex||c.cloudCodex):c.claudeRoutine;
+ const running=t?.status==='running'||t?.status==='claimed'||t?.status==='queued';const terminal=t?.status==='cancelled'||t?.status==='completed';
  $('run-button').disabled=!t||busy||running||terminal;
- $('run-button').innerHTML=`${running?'실행 중':t?.status==='paused'?'이어서 실행':'작업 실행'} <span>↗</span>`;
- $('executor-status').textContent=client?.remote?(available?provider==='codex'?'이 서버의 Codex 구독으로 실행합니다.':'연결된 클라우드 Routine으로 실행합니다.':provider==='codex'?'이 서버에 Codex 실행기가 연결되지 않았습니다.':'서버에 Claude Routine 설정이 필요합니다.'):'실행기를 연결하세요. 현재는 작업을 기록할 수 있습니다.';
+ $('run-button').innerHTML=`${t?.status==='queued'?'데스크톱 실행 대기':running?'실행 중':t?.status==='paused'?'이어서 실행':'작업 실행'} <span>↗</span>`;
+ $('executor-status').textContent=client?.remote?(available?provider==='codex'?(c.cloudCodex?(state().desktop?.online?'데스크톱 연결됨 · 같은 클라우드 작업에 결과를 저장합니다.':'데스크톱 오프라인 · 실행 요청을 대기열에 보관합니다.'):'이 서버의 Codex 구독으로 실행합니다.'):'연결된 클라우드 Routine으로 실행합니다.':provider==='codex'?'이 서버에 Codex 실행기가 연결되지 않았습니다.':'서버에 Claude Routine 설정이 필요합니다.'):'실행기를 연결하세요. 현재는 작업을 기록할 수 있습니다.';
  $('pause-button').disabled=!t||busy||terminal||t.status==='paused';$('cancel-button').disabled=!t||busy||terminal;
  $('edit-plan').disabled=!t||busy||running||terminal;
  $('prompt').placeholder=t?t.status==='waiting_user'?'선택 또는 수정 요청을 남겨주세요.':'추가 요청이나 방향을 남겨주세요.':'어떤 작업을 함께할까요?';
@@ -94,7 +94,8 @@ function exportRecords(all=false){const tasks=!all&&current()?[current()]:state(
 async function run(){
  const t=current();if(!t)return;
  const c=state().capabilities||{},provider=$('provider').value;
- if(!client.remote||(provider==='codex'?!c.localCodex:!c.claudeRoutine)){showSettings();toast('선택한 AI 실행기가 연결된 서버를 설정하세요.');return;}
+ if(!client.remote||(provider==='codex'?!(c.localCodex||c.cloudCodex):!c.claudeRoutine)){showSettings();toast('선택한 AI 실행기가 연결된 서버를 설정하세요.');return;}
+ if(provider==='codex'&&c.cloudCodex&&t.attachments?.length)throw new Error('클라우드 Codex의 원본 재연결 기능을 준비 중입니다. 첨부 작업은 현재 Claude 실행 또는 로컬 전용 모드를 사용하세요.');
  const missing=(t.attachments||[]).filter(a=>a.source!=='url'&&!connected(a));if(missing.length)throw new Error(`${missing.length}개 원본의 연결이 끊겼습니다. 파일 또는 폴더를 다시 연결하세요.`);
  const materials=[];let total=0;const unsupported=[];
  for(const a of t.attachments||[]){if(a.source==='url')continue;const r=await extractConnectedText(await session.getFile(a.id),{maxChars:Math.min(200000,600000-total)});if(r.status==='unavailable'){unsupported.push(a.name);continue;}if(r.status==='truncated')throw new Error(`${a.name}은 텍스트 전송 범위를 초과합니다. 필요한 부분을 별도 텍스트로 연결하세요. 자동으로 잘라 분석하지 않습니다.`);total+=new TextEncoder().encode(r.text).byteLength;materials.push({name:a.path||a.name,text:r.text});if(total>600000)throw new Error('한 번에 조회할 텍스트 범위를 초과했습니다. 자료를 나눠 연결하세요.');}
