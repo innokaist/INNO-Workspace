@@ -1,3 +1,4 @@
+import {failureRecord} from '../public/core/failures.mjs';
 import { DatabaseSync } from 'node:sqlite';
 
 import {
@@ -166,7 +167,8 @@ export class SqliteTaskStore {
           ...(current.checkpoint ?? {}),
           provider,
           status: 'waiting_connection',
-          content: reason,
+          content: current.checkpoint?.content ?? reason,
+          failure: failureRecord({failure:{kind:'unavailable'}},now),
           updatedAt: now,
         },
       };
@@ -199,7 +201,7 @@ export class SqliteTaskStore {
         version: current.version + 1,
         updatedAt: now,
         checkpoint: {
-          ...previous,
+          ...previous, failure: undefined,
           executionId,
           generation,
           provider,
@@ -262,6 +264,7 @@ export class SqliteTaskStore {
         checkpoint: {
           ...task.checkpoint,
           status: 'completed',
+          failure: undefined,
           content: input.checkpoint ?? 'Execution completed.',
           updatedAt: now,
           completedAt: now,
@@ -283,7 +286,7 @@ export class SqliteTaskStore {
         checkpoint: {
           ...task.checkpoint,
           status: 'running',
-          content: input.checkpoint ?? 'Remote session started; awaiting durable checkpoints.',
+          content: task.checkpoint?.content ?? input.checkpoint ?? 'Remote session started; awaiting durable checkpoints.',
           sessionUrl: input.sessionUrl,
           updatedAt: now,
         },
@@ -296,7 +299,8 @@ export class SqliteTaskStore {
     return this.replaceTask(id, current.version, task => {
       this.assertExecution(task, input);
       const now = this.now();
-      const status = input.status === 'waiting_quota' ? 'waiting_quota' : 'failed';
+      const failure = failureRecord(input, now);
+      const status = failure.kind === 'quota' ? 'waiting_quota' : failure.kind === 'authentication' ? 'waiting_connection' : 'failed';
       return {
         ...task,
         status,
@@ -305,7 +309,7 @@ export class SqliteTaskStore {
         checkpoint: {
           ...task.checkpoint,
           status,
-          content: String(input.error || 'Execution failed.').slice(0, 4_000),
+          failure,
           updatedAt: now,
         },
       };

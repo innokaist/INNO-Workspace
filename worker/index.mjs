@@ -1,3 +1,4 @@
+import {failureInput,runnerError} from '../public/core/failures.mjs';
 import {RecordImporter} from './imports.mjs';
 import {CloudBridge} from './bridge.mjs';
 import { ConflictError, ValidationError, sanitizeMaterials } from '../public/core/tasks.mjs';
@@ -90,9 +91,7 @@ async function fireRoutine(fetchFn, env, task, materials, ownership, signal) {
   });
   const result = await response.json().catch(() => null);
   if (!response.ok) {
-    const error = new Error(result?.error?.message || `Claude Routine returned HTTP ${response.status}`);
-    if (response.status === 429) error.code = 'QUOTA_EXCEEDED';
-    throw error;
+    throw runnerError(null,{status:response.status,retryAfter:response.headers.get('retry-after')});
   }
   if (!result?.claude_code_session_id || !result?.claude_code_session_url) {
     throw new Error('Claude Routine returned an invalid session response');
@@ -168,7 +167,7 @@ export function createWorker({fetchFn = fetch} = {}) {
                 ? 'Codex subscription execution is available only on the connected local server.'
                 : 'Claude Routine is not configured.',
             });
-            return responseJson({error: task.checkpoint.content, task}, 503, headers);
+            return responseJson({error: 'Claude Routine is not configured.', task}, 503, headers);
           }
           const claim = await store.claimExecution(taskId, {provider: 'claude', expectedVersion: input.expectedVersion});
           const execution = (async () => {
@@ -184,8 +183,7 @@ export function createWorker({fetchFn = fetch} = {}) {
               if (current.status !== 'running' || current.checkpoint?.executionId !== claim.executionId) return;
               await store.failExecution(taskId, {
                 executionId: claim.executionId, generation: claim.generation,
-                error: error instanceof Error ? error.message : String(error),
-                status: error?.code === 'QUOTA_EXCEEDED' ? 'waiting_quota' : 'failed',
+                ...failureInput(error?.code ? error : runnerError(error)),
               });
             }
           })();

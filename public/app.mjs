@@ -1,3 +1,4 @@
+import {failureGuidance} from './core/failures.mjs';
 import {createRecordImportUI} from './record-import.mjs';
 import {WorkspaceClient,exportBundle,parseBundle,validateEndpoint} from './core/client.mjs';
 import {AttachmentSession} from './core/attachments.mjs';
@@ -58,6 +59,7 @@ function renderPlan(){
  $('agent-plan').innerHTML=plan.length?plan.map((p,i)=>`<div class="agent-item ${p.status==='running'?'running':''}"><span class="agent-number">${p.status==='completed'||p.status==='done'?'✓':String(i+1).padStart(2,'0')}</span><div><strong>${esc(p.label||p.role)}</strong><small>${esc(statusNames[p.status]||'제안')} ${p.role&&p.label&&p.role!==p.label?`· ${esc(p.role)}`:''}</small></div></div>`).join(''):'<div class="panel-empty"><div class="empty-orbit">◇</div><p>요청에 맞는 역할을<br>필요한 만큼 구성합니다.</p></div>';
  const checkpoint=typeof t?.checkpoint==='string'?t.checkpoint:t?.checkpoint?.content;
  $('checkpoint-card').innerHTML=checkpoint?`<span>↻</span><div><strong>저장된 재개 지점</strong><p>${esc(checkpoint)}</p></div>`:'<span>↻</span><div><strong>맥락은 계속 이어집니다</strong><p>작업 기록과 결정 사항을 저장합니다.<br>원본은 필요할 때 다시 연결하세요.</p></div>';
+ const recovery=failureGuidance(t);if(recovery){$('checkpoint-card').lastElementChild.insertAdjacentHTML('beforeend',`<div role="status"><strong>${esc(recovery.title)}</strong><p>${esc(recovery.detail)}${recovery.retryNotBefore?' 서버 재시도 안내: '+esc(date(recovery.retryNotBefore))+' (구독 한도 초기화 시각은 아닙니다).':''} 자동 재실행은 하지 않습니다. 원본이 필요하면 다시 연결하세요.</p></div>`);}
  const artifacts=t?.artifacts||[];$('artifact-count').textContent=artifacts.length;
  $('artifacts').innerHTML=artifacts.length?artifacts.map(a=>`<div class="artifact-row" role="button" tabindex="0" data-artifact="${esc(a.id)}"><span>▤</span><div><strong>${esc(a.name)}</strong><small>${esc(a.mime||'text/plain')}</small></div><span>↓</span></div>`).join(''):'<p class="small-copy">생성된 결과물이 여기에 모입니다.</p>';
 }

@@ -638,3 +638,37 @@ test('local startup config creates a strong session token and puts it only in th
   assert.equal(url, 'http://127.0.0.1:4173/#token=generated-token-0123456789abcdef');
   assert.equal(url.includes('?token='), false);
 });
+
+
+test('Codex nonzero JSON failure preserves quota classification without leaking diagnostic text', async () => {
+ const spawnProcess=()=>{const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();queueMicrotask(()=>{child.stdout.write(JSON.stringify({type:'turn.failed',error:{message:'You have hit your usage limit. PRIVATE_DIAGNOSTIC'}})+'\n');child.stderr.write('PRIVATE_DIAGNOSTIC');child.emit('close',1);});return child;};
+ const runner=createCodexRunner({spawnProcess,ensureDirectory:()=>{}});
+ await assert.rejects(()=>runner.run({task:{id:'t',prompt:'hello'}}), e=>e.code==='QUOTA_EXCEEDED'&&!e.message.includes('PRIVATE_DIAGNOSTIC'));
+});
+
+test('Claude authentication rejection has safe diagnostics and quota retry hint stays informational', async () => {
+ for(const status of [401,429]){
+  const runner=createClaudeRoutineRunner({url:'https://api.anthropic.com/v1/routines/example/fire',token:'test',fetchFn:async()=>new Response(JSON.stringify({error:{message:'PRIVATE_DIAGNOSTIC'}}),{status,headers:{'Retry-After':'60'}})});
+  await assert.rejects(()=>runner.run({task:{id:'t',prompt:'hello'}}),e=>e.code===(status===429?'QUOTA_EXCEEDED':'AUTH_REQUIRED')&&!e.message.includes('PRIVATE_DIAGNOSTIC')&&(status!==429||Number.isFinite(Date.parse(e.retryNotBefore))));
+ }
+});
+
+test('SQLite keeps verified checkpoint across failed execution and explicit resume', async t => {
+ const app=await fixture();t.after(()=>app.close());let task=app.store.createTask({prompt:'work'});
+ task=app.store.applyAction(task.id,{action:'checkpoint',expectedVersion:task.version,content:'Verified stage one'});
+ const claim=app.store.claimExecution(task.id,{provider:'codex',expectedVersion:task.version});
+ task=app.store.failExecution(task.id,{...claim,failure:{kind:'quota'},error:'PRIVATE_DIAGNOSTIC',status:'waiting_quota'});
+ assert.equal(task.checkpoint.content,'Verified stage one');assert.equal(task.checkpoint.failure.kind,'quota');assert.equal(JSON.stringify(task).includes('PRIVATE_DIAGNOSTIC'),false);
+ task=app.store.applyAction(task.id,{action:'resume',expectedVersion:task.version});const next=app.store.claimExecution(task.id,{provider:'codex',expectedVersion:task.version});
+ assert.equal(next.task.checkpoint.content,'Verified stage one');assert.equal(next.task.checkpoint.failure,undefined);
+ assert.throws(()=>app.store.failExecution(task.id,{...claim,error:'late'}),/stale/);
+});
+
+
+test('SQLite remote session launch retains existing checkpoint',async t=>{
+ const app=await fixture();t.after(()=>app.close());let task=app.store.createTask({prompt:'work'});task=app.store.applyAction(task.id,{action:'checkpoint',expectedVersion:task.version,content:'Verified stage one'});
+ const c=app.store.claimExecution(task.id,{provider:'claude',expectedVersion:task.version});task=app.store.leaveExecutionRunning(task.id,{...c,sessionUrl:'https://claude.ai/code/test',checkpoint:'Session started'});
+ assert.equal(task.checkpoint.content,'Verified stage one');assert.equal(task.checkpoint.sessionUrl,'https://claude.ai/code/test');
+});
+
+test('SQLite unavailable executor preserves verified progress',async t=>{const app=await fixture();t.after(()=>app.close());let task=app.store.createTask({prompt:'work'});task=app.store.applyAction(task.id,{action:'checkpoint',expectedVersion:task.version,content:'Verified stage one'});task=app.store.markWaiting(task.id,{expectedVersion:task.version,provider:'codex',reason:'unavailable'});assert.equal(task.checkpoint.content,'Verified stage one');assert.equal(task.checkpoint.failure.kind,'unavailable');});

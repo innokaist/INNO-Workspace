@@ -1,3 +1,4 @@
+import {failureInput,runnerError} from '../public/core/failures.mjs';
 import {sanitizeMaterials} from '../public/core/tasks.mjs';
 export function createDesktopBridge({request,runner,outbox,heartbeatMs=15000,beforeClaim=async()=>{},onError=()=>{}}){
  let busy=false,stopped=false,controller,background=Promise.resolve();
@@ -11,7 +12,7 @@ export function createDesktopBridge({request,runner,outbox,heartbeatMs=15000,bef
   finally{clearInterval(timer);if(renewal)await renewal;}
   if(monitorError)throw monitorError;
   if(controller.signal.aborted)throw Error('Desktop execution stopped');
-  const record={taskId:task.id,action:runError?'fail':'complete',input:runError?{...owner,error:'Desktop executor failed. Inspect the local runner; retry explicitly.',status:runError.code==='QUOTA_EXCEEDED'?'waiting_quota':'failed'}:{...owner,content:result.content,checkpoint:result.checkpoint,artifacts:result.artifacts}};
+  const record={taskId:task.id,action:runError?'fail':'complete',input:runError?{...owner,...failureInput(runError.code?runError:runnerError(runError))}:{...owner,content:result.content,checkpoint:result.checkpoint,artifacts:result.artifacts}};
   outbox.write(record);await deliver(record);return true;
  }
  return {

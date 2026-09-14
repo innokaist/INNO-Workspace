@@ -1,3 +1,4 @@
+import {runnerError} from '../public/core/failures.mjs';
 import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { readFile, realpath, stat } from 'node:fs/promises';
@@ -225,7 +226,7 @@ function parseCodexEvents(stdout) {
       outputTokens = Number.isFinite(usage.output_tokens) ? usage.output_tokens : outputTokens;
     }
     if (event.type === 'turn.failed') {
-      throw new Error(event.error?.message || 'Codex turn failed');
+      throw runnerError(event.error || new Error('Codex turn failed'));
     }
   }
   return {
@@ -309,11 +310,12 @@ export function createCodexRunner({
         stdio: ['pipe', 'pipe', 'pipe'],
       });
       const result = await collectProcess(child, {input: taskPrompt(task, materials, {executionId, generation, managedDelivery}), signal});
-      if (result.code !== 0) {
-        const detail = result.stderr.trim().slice(-2_000);
-        throw new Error(`Codex exited with code ${result.code}${detail ? `: ${detail}` : ''}`);
-      }
       const parsed = parseCodexEvents(result.stdout);
+      if (result.code !== 0) {
+        // Only diagnostics are classified, never assistant messages or source excerpts.
+        const errors=result.stdout.split(/\r?\n/).flatMap(line=>{try{const e=JSON.parse(line);return e.type==='error'?[e.message??e.error?.message??'']:[];}catch{return [];}});
+        throw runnerError(new Error(errors.join('\n') || result.stderr.slice(-2_000)));
+      }
       if (!parsed.content) throw new Error('Codex completed without an assistant result');
       const structured = structuredResult(parsed.content);
       if (structured) structured.artifacts = await materializeArtifacts(structured.artifacts, executionDirectory);
@@ -365,9 +367,7 @@ export function createClaudeRoutineRunner({url, token, fetchFn = fetch} = {}) {
         body = null;
       }
       if (!response.ok) {
-        const error = new Error(body?.error?.message || body?.error || `Claude Routine returned HTTP ${response.status}`);
-        if (response.status === 429) error.code = 'QUOTA_EXCEEDED';
-        throw error;
+        throw runnerError(null,{status:response.status,retryAfter:response.headers.get('retry-after')});
       }
       if (typeof body?.claude_code_session_url !== 'string' || typeof body?.claude_code_session_id !== 'string') {
         throw new Error('Claude Routine returned an invalid session response');
