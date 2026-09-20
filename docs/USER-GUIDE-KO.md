@@ -220,3 +220,7 @@ node .inno/tools/npm/package/bin/npx-cli.js --yes wrangler@4 deploy
 데스크톱 화면의 **설정 → 이 PC 저장 공간**에서 실행 폴더 용량과 정리 대상을 확인할 수 있습니다. [저장 공간 관리 안내](STORAGE-MANAGEMENT.md)를 참고하세요.
 
 동기화 전송 최적화 적용 후에는 화면을 한 번 새로고침하세요. 변경 없는 조회는 기록을 재전송하지 않습니다. [동기화 동작 안내](SYNC-EFFICIENCY.md)
+
+## 선택 문헌 비교
+
+연구 자료에서 문헌 2~8편을 선택해 비교 요청과 임시 자료를 준비할 수 있습니다. [실행 및 재연결 안내](LITERATURE-WORKFLOW.md)를 참고하세요. 전체 완료 여부와 남은 단계는 [요구사항 진행표](REQUIREMENTS-STATUS.md)에 구분했습니다.

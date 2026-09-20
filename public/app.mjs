@@ -1,3 +1,4 @@
+import {buildLiteratureWorkflow} from './core/literature-workflow.mjs';
 import {createStorageUI} from './run-storage.mjs';
 import {failureGuidance} from './core/failures.mjs';
 import {createRecordImportUI} from './record-import.mjs';
@@ -12,6 +13,7 @@ const statusNames={ready:'실행 대기',queued:'실행 대기',claimed:'실행 
 const typeNames={general:'일반 작업',literature:'문헌 · 아이디어',analysis:'분석 · Figure',writing:'논문 · 문서',presentation:'발표자료',career:'CV · 지원서'};
 const names={workspace:'작업실',research:'연구 자료',integrations:'연결 앱',usage:'사용량'};
 const session=new AttachmentSession();
+const selectedPapers=new Set();
 let client,activeId=null,view='workspace',draftAttachments=[],papers=[],prismReports=[],busy=false,refreshing=false,previewUrls=[],lastRendered='';
 const storageUI=createStorageUI(()=>client);
 const recordImports=createRecordImportUI({getClient:()=>client,onDone:()=>refresh()});
@@ -113,9 +115,10 @@ async function run(){
  await client.run(t.id,{provider,materials,expectedVersion:current().version});await refresh();toast('실행 요청을 보냈습니다. 진행 상태와 결과를 기다리는 중입니다.');
 }
 function renderResearch(){
+ $('literature-workflow').textContent=`선택 논문으로 비교 작업 준비 (${selectedPapers.size})`;
  const found=$('paper-search').value.trim()?searchPapers(papers,$('paper-search').value,80):papers.slice(0,80);
  if(!papers.length&&!prismReports.length)return;
- $('research-results').innerHTML=prismReports.map((r,i)=>`<article class="paper-card"><div class="paper-meta"><span>PRISM ANALYSIS</span><span>${esc(r.engine?.version||r.engine?.name||r.engine||'엔진 미기재')}</span></div><h3>${esc(r.name)}</h3><p>원본 출처와 분석 파라미터를 포함한 연결 결과</p><button data-prism="${i}">분석 JSON 보기 ↗</button></article>`).join('')+found.map(p=>`<article class="paper-card"><div class="paper-meta"><span>${esc(p.year||'연도 미기재')}</span><span>${esc(p.venue||'')}</span><span class="status">${({'metadata':'메타데이터만','abstract':'초록 포함','full-text':'전문 범위 표시'})[p.evidenceScope]||'범위 미확인'}</span></div><h3>${esc(p.title)}</h3><p>${esc((p.abstract||'초록이 없습니다. 본문을 읽은 것으로 간주하지 않습니다.').slice(0,600))}</p><div class="paper-meta">${p.doi?`<a href="https://doi.org/${encodeURI(p.doi)}" target="_blank" rel="noopener noreferrer">${esc(p.doi)} ↗</a>`:''}<button data-paper="${esc(p.id)}">이 논문으로 질문하기</button></div></article>`).join('')+(!found.length&&papers.length?'<p class="small-copy">일치하는 논문이 없습니다.</p>':'');
+ $('research-results').innerHTML=prismReports.map((r,i)=>`<article class="paper-card"><div class="paper-meta"><span>PRISM ANALYSIS</span><span>${esc(r.engine?.version||r.engine?.name||r.engine||'엔진 미기재')}</span></div><h3>${esc(r.name)}</h3><p>원본 출처와 분석 파라미터를 포함한 연결 결과</p><button data-prism="${i}">분석 JSON 보기 ↗</button></article>`).join('')+found.map(p=>`<article class="paper-card"><div class="paper-meta"><span>${esc(p.year||'연도 미기재')}</span><span>${esc(p.venue||'')}</span><span class="status">${({'metadata':'메타데이터만','abstract':'초록 포함','full-text':'전문 범위 표시'})[p.evidenceScope]||'범위 미확인'}</span></div><label class="paper-selection"><input type="checkbox" data-select-paper="${esc(p.id)}" ${selectedPapers.has(p.id)?'checked':''}> 비교할 논문 선택</label><h3>${esc(p.title)}</h3><p>${esc((p.abstract||'초록이 없습니다. 본문을 읽은 것으로 간주하지 않습니다.').slice(0,600))}</p><div class="paper-meta">${p.doi?`<a href="https://doi.org/${encodeURI(p.doi)}" target="_blank" rel="noopener noreferrer">${esc(p.doi)} ↗</a>`:''}<button data-paper="${esc(p.id)}">이 논문으로 질문하기</button></div></article>`).join('')+(!found.length&&papers.length?'<p class="small-copy">일치하는 논문이 없습니다.</p>':'');
 }
 const integrationDescriptions={Scheduler:'합성과 광학 측정 일정을 확인하고 계획을 이어갑니다.',NanoLab:'합성 계획, lot, ICP 조성과 수율을 관리합니다.',Ledger:'시료와 측정, 보정 및 채택 결과를 연결합니다.',Prism:'광학 측정 HDF5와 power scan, rise time을 분석합니다.',Analytics:'전자현미경 이미지와 EDS 자료를 분석합니다.',RefAtlas:'논문 수집, 근거 검색과 연구 문헌 탐색을 이어갑니다.'};
 function renderIntegrations(){
@@ -181,3 +184,8 @@ async function init(){
  if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
 init().catch(e=>toast(e.message));
+
+$('research-results').addEventListener('change',e=>{const input=e.target.closest('[data-select-paper]');if(!input)return;if(input.checked)selectedPapers.add(input.dataset.selectPaper);else selectedPapers.delete(input.dataset.selectPaper);$('literature-workflow').textContent=`선택 논문으로 비교 작업 준비 (${selectedPapers.size})`;});
+async function prepareLiterature(reconnect=false){const workflow=await buildLiteratureWorkflow(papers.filter(p=>selectedPapers.has(p.id)));const file=new File([workflow.text],workflow.name,{type:'text/plain',lastModified:0});if(reconnect){session.addFiles([file]);renderAttachments();toast('선택한 논문 자료를 다시 연결했습니다. 기존 작업을 열어 연결 상태를 확인하세요.');return;}newTask();$('task-type').value=workflow.type;$('prompt').value=workflow.prompt;await addFiles([file]);toast('문헌 비교 요청과 임시 자료를 준비했습니다. 연구 목적을 수정하고 작업 기록 후 AI 실행을 누르세요.');}
+$('literature-workflow').onclick=()=>guarded(()=>prepareLiterature());
+$('literature-reconnect').onclick=()=>guarded(()=>prepareLiterature(true));

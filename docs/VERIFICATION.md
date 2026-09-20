@@ -67,3 +67,12 @@
 - Independent review found no material issues.
 - Worker deployed version 3c5649b0-ca26-4eb4-9b59-03764ada6122; idle desktop bridge restarted.
 - Live read-only check: cloud full13346 bytes versus unchanged188 bytes; desktop full13473 bytes versus unchanged315 bytes. Dynamic capabilities/presence/local status retained. These are response-body measurements for the current unchanged dataset, not overall speed or request-count benchmarks. No AI calls or user task mutations needed.
+
+## 2026-09-21 — 선택 문헌 비교
+
+- 전체 테스트 137개 통과(문헌 패킷·범위·재연결 식별·크기 검증 3개 추가).
+- 격리된 메모리 서버 브라우저: 문헌 두 편 선택 → 초안/임시 자료 연결 → 작업 기록 확인.
+- 실제 Codex 구독 실행: 가상 문헌 두 편으로 comparison.md, ideas.md, review.md 3개 저장. 작업 ID: 56a20cbf-9910-4076-a29e-d4488d9ef906. 실제 논문 연구 검증은 아님.
+- 출력의 P1/P2, 10/20 W, 300/350 K, 반복 3/2회 및 조건 차이 한계 확인. 요청·대화·첨부 메타데이터에 가상 원문 미포함 확인.
+- 검토 에이전트 호출 실패 후 작성 에이전트 자기검토로 완료; 독립 검토 성공으로 간주하지 않음. 자동 산출물 품질 판정은 후속 단계.
+- Cloudflare 배포 ab370574-3142-45e5-ad2a-c25f5715ae30 및 배포된 모듈 응답 확인.

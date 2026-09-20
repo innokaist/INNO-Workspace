@@ -34,3 +34,7 @@ Task 4: GitHub source and Pages published, Cloudflare Worker/D1 deployed. Live a
 2026-09-20: Desktop storage usage view and explicit selected completed-run cleanup implemented and deployed. Active/pending work, changed files and linked paths are protected.128 tests pass; live read-only inventory verified. See STORAGE-MANAGEMENT.md.
 
 2026-09-21: Revision-conditional sync deployed on Worker, local server, desktop proxy and browser client. Unchanged polls skip task/usage reads and payloads while preserving presence metadata. Stale responses cannot regress client state.134tests pass. See SYNC-EFFICIENCY.md.
+
+## 2026-09-21 — 첫 문헌 작업 흐름
+
+선택 RefAtlas 문헌 2~8편의 임시 근거 패킷과 비교/아이디어/AI 자기검토 요청을 구현하고 실제 구독 실행으로 세 결과물 저장을 확인했다. 원문은 요청 기록에 포함하지 않는다. 사용법은 LITERATURE-WORKFLOW.md, 전체 요구 대비 남은 작업은 REQUIREMENTS-STATUS.md 참조. 다음 우선 단계는 산출물 누락·근거 연결의 자동 점검 및 검토 실패 처리이다. 전체 플랫폼 완료를 의미하지 않는다.
