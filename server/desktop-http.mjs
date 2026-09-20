@@ -19,7 +19,7 @@ export function createDesktopServer({token,publicDir,request,bridge,localRecords
    if(p.startsWith('/api/')){
     const expected=Buffer.from('Bearer '+token),actual=Buffer.from(req.headers.authorization||'');
     if(actual.length!==expected.length||!timingSafeEqual(actual,expected))return json(res,401,{error:'unauthorized'});
-    if(req.method==='GET'&&p==='/api/state'){const state=await request(p);return json(res,200,{...state,capabilities:{...state.capabilities,desktopSources:true,localRecordImport:!!localRecords,runStorage:!!runStorage},localDesktop:bridge.status()});}
+    if(req.method==='GET'&&p==='/api/state'){const state=await request(p+url.search);return json(res,200,{...state,capabilities:{...state.capabilities,desktopSources:true,localRecordImport:!!localRecords,runStorage:!!runStorage},localDesktop:bridge.status()});}
     if(runStorage&&req.method==='GET'&&p==='/api/run-storage'){const view=await bridge.maintenance(async()=>{const state=await request('/api/state');return runStorage.list(state.tasks);});return json(res,200,{...view,desktop:bridge.status()});}
     if(runStorage&&req.method==='POST'&&p==='/api/run-storage/remove'){const input=await body(req);if(input.confirm!==true)return json(res,400,{error:'삭제 확인이 필요합니다.'});const result=await bridge.maintenance(async()=>{const state=await request('/api/state');return runStorage.remove(input.runs,state.tasks);});return json(res,200,result);}
     if(localRecords&&req.method==='GET'&&p==='/api/local-records')return json(res,200,await localRecords.list(url.searchParams.get('cursor')||''));

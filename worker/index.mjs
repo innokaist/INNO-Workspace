@@ -1,3 +1,4 @@
+import {parseRevision} from '../public/core/sync.mjs';
 import {failureInput,runnerError} from '../public/core/failures.mjs';
 import {RecordImporter} from './imports.mjs';
 import {CloudBridge} from './bridge.mjs';
@@ -125,7 +126,7 @@ export function createWorker({fetchFn = fetch} = {}) {
         const capabilities = {cloudCodex: true, localCodex: false, claudeRoutine: hasRoutine, cloud: true, connected: true};
 
         if (request.method === 'GET' && pathname === '/api/state') {
-          return responseJson({...await store.getState(capabilities), desktop: await bridge.presence()}, 200, headers);
+          return responseJson({...await store.getState(capabilities,parseRevision(url.searchParams.get('since'))), desktop: await bridge.presence()}, 200, headers);
         }
         if (request.method === 'POST' && pathname === '/api/imports') {
           const input=await body(request);return responseJson(await new RecordImporter(store).import(input.task,{copy:input.copy??false}),200,headers);

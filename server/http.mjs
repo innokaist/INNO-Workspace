@@ -1,3 +1,4 @@
+import {parseRevision} from '../public/core/sync.mjs';
 import {failureInput,runnerError} from '../public/core/failures.mjs';
 import { createReadStream } from 'node:fs';
 import { realpath, stat } from 'node:fs/promises';
@@ -203,7 +204,7 @@ export function createInnoServer({
       }
 
       if (request.method === 'GET' && pathname === '/api/state') {
-        sendJson(response, 200, store.getState(await capabilities()), cors);
+        sendJson(response, 200, store.getState(await capabilities(),parseRevision(url.searchParams.get('since'))), cors);
         return;
       }
 

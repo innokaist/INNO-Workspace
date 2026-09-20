@@ -60,3 +60,10 @@
 -Browser fixture verified usage/selection totals, protected items, file list expansion, confirmation-gated delete button, and confirmation reset when selection changes. No UI deletion was performed; filesystem removal tests used temporary fixtures only.
 -Worker deployed version2b895cca-4fa7-4fae-b33b-7dddab01be11; idle desktop bridge restarted. Live read-only storage endpoint returned0 bytes,2 entries,2 completed eligible folders. User data deleted:0.
 -Temporary UI server/script/tab removed after verification.
+
+## 2026-09-21 Conditional state sync
+
+- 134 tests pass, including retained task array on unchanged response, fresh connection metadata, out-of-order responses, overlapping revision responses, skipped SQLite/D1 task reads, and desktop cursor forwarding.
+- Independent review found no material issues.
+- Worker deployed version 3c5649b0-ca26-4eb4-9b59-03764ada6122; idle desktop bridge restarted.
+- Live read-only check: cloud full13346 bytes versus unchanged188 bytes; desktop full13473 bytes versus unchanged315 bytes. Dynamic capabilities/presence/local status retained. These are response-body measurements for the current unchanged dataset, not overall speed or request-count benchmarks. No AI calls or user task mutations needed.

@@ -98,9 +98,11 @@ export class SqliteTaskStore {
     return this.selectTasks.all().map(row => JSON.parse(row.body));
   }
 
-  getState(capabilities = {}) {
+  getState(capabilities = {}, since) {
+    const revision=Number(this.selectRevision.get().value);
+    if(Number.isSafeInteger(since)&&since>=0&&since===revision)return {revision,unchanged:true,capabilities};
     return {
-      revision: Number(this.selectRevision.get().value),
+      revision,
       tasks: this.listTasks(),
       usage: this.selectUsage.all().map(row => JSON.parse(row.body)),
       capabilities,

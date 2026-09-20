@@ -218,3 +218,5 @@ node .inno/tools/npm/package/bin/npx-cli.js --yes wrangler@4 deploy
 장시간 실행의 로그 처리 상한과 결과 파일 보존 기준은 [실행 중 자원 누적 관리](RUNTIME-RESOURCES.md)를 참고하세요.
 
 데스크톱 화면의 **설정 → 이 PC 저장 공간**에서 실행 폴더 용량과 정리 대상을 확인할 수 있습니다. [저장 공간 관리 안내](STORAGE-MANAGEMENT.md)를 참고하세요.
+
+동기화 전송 최적화 적용 후에는 화면을 한 번 새로고침하세요. 변경 없는 조회는 기록을 재전송하지 않습니다. [동기화 동작 안내](SYNC-EFFICIENCY.md)

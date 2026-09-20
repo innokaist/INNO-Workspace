@@ -65,18 +65,12 @@ export class D1TaskStore {
     return result.results.map(row => JSON.parse(row.body));
   }
 
-  async getState(capabilities = {}) {
-    const [revision, tasks, usage] = await Promise.all([
-      this.db.prepare("SELECT value FROM metadata WHERE key = 'revision'").first(),
-      this.listTasks(),
-      this.db.prepare('SELECT body FROM usage ORDER BY provider').all(),
-    ]);
-    return {
-      revision: Number(revision?.value ?? 0),
-      tasks,
-      usage: usage.results.map(row => JSON.parse(row.body)),
-      capabilities,
-    };
+  async getState(capabilities = {}, since) {
+    const row=await this.db.prepare("SELECT value FROM metadata WHERE key = 'revision'").first();
+    const revision=Number(row?.value??0);
+    if(Number.isSafeInteger(since)&&since>=0&&since===revision)return {revision,unchanged:true,capabilities};
+    const [tasks,usage]=await Promise.all([this.listTasks(),this.db.prepare('SELECT body FROM usage ORDER BY provider').all()]);
+    return {revision,tasks,usage:usage.results.map(row=>JSON.parse(row.body)),capabilities};
   }
 
   async replaceTask(id, expectedVersion, updater) {

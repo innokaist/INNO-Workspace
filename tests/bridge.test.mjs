@@ -80,3 +80,5 @@ test('D1 remote session launch retains existing checkpoint',async()=>{
 });
 
 test('D1 unavailable executor preserves verified progress',async()=>{const {store,task}=await fixture();let t=await store.applyAction(task.id,{action:'checkpoint',expectedVersion:task.version,content:'Verified stage one'});t=await store.markWaiting(t.id,{expectedVersion:t.version,provider:'claude',reason:'unavailable'});assert.equal(t.checkpoint.content,'Verified stage one');assert.equal(t.checkpoint.failure.kind,'unavailable');});
+
+test('D1 unchanged state skips task reads but returns fresh capabilities',async()=>{const {store}=await fixture();const s=await store.getState();store.listTasks=()=>{throw Error('must not read tasks');};const small=await store.getState({cloud:true},s.revision);assert.equal(small.unchanged,true);assert.equal(small.tasks,undefined);assert.equal(small.capabilities.cloud,true);});

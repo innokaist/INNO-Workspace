@@ -36,7 +36,7 @@ async function localMutate(update){
 }
 
 export class WorkspaceClient {
-  constructor({baseUrl='',token='',remote=false}={}){this.baseUrl=validateEndpoint(baseUrl);this.token=token;this.remote=remote;this.state=blank();this.lastSync=null;}
+  constructor({baseUrl='',token='',remote=false}={}){this.baseUrl=validateEndpoint(baseUrl);this.token=token;this.remote=remote;this.state=blank();this.lastSync=null;this.refreshSequence=0;this.appliedSequence=0;this.syncedRevision=undefined;}
   async request(path,body){
     const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),30000);
     try{
@@ -46,7 +46,18 @@ export class WorkspaceClient {
       return d;
     }finally{clearTimeout(timeout);}
   }
-  async refresh(){if(this.remote){const s=await this.request('/api/state');this.state={...blank(),...s};this.lastSync=Date.now();}else{this.state={...blank(),...await localRead()};}return this.state;}
+  async refresh(){
+    if(!this.remote){this.state={...blank(),...await localRead()};return this.state;}
+    const sequence=++this.refreshSequence,since=this.syncedRevision;
+    const s=await this.request('/api/state'+(Number.isSafeInteger(since)?'?since='+since:''));
+    if(sequence<this.appliedSequence||(this.syncedRevision!==undefined&&Number.isSafeInteger(s.revision)&&s.revision<this.state.revision))return this.state;
+    if(s.unchanged){
+      if(since===undefined||s.revision!==since||this.state.revision!==since)throw Error('동기화 변경 번호가 일치하지 않습니다. 다시 연결하세요.');
+      const {unchanged,...metadata}=s;this.state={...this.state,...metadata};
+    }else{this.state={...blank(),...s};}
+    this.syncedRevision=Number.isSafeInteger(s.revision)&&s.revision>=0?s.revision:undefined;
+    this.appliedSequence=sequence;this.lastSync=Date.now();return this.state;
+  }
   async create(input){
     if(this.remote){const {task}=await this.request('/api/tasks',input);await this.refresh();return task;}
     const {createTask}=await import('./tasks.mjs');const task=createTask(input);const saved=await localMutate(state=>{state.tasks.unshift(task);return task;});this.state=saved.state;return saved.result;
