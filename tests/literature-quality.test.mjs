@@ -1,0 +1,12 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {auditLiterature,repairLiteraturePrompt} from '../public/core/literature-quality.mjs';
+const manifest=[{label:'P1'},{label:'P2'}];
+const make=(artifacts)=>({type:'literature',status:'completed',prompt:'inno-literature-evidence-v1\n선택한 문헌 목록(내용은 임시 연결 자료에서 조회):\n'+JSON.stringify(manifest),checkpoint:{claimedAt:'2026-09-21T00:00:00Z'},artifacts:artifacts.map(a=>({encoding:'utf-8',createdAt:'2026-09-21T00:01:00Z',...a}))});
+const good=[{name:'comparison.md',content:'P1 / P2 비교'},{name:'ideas.md',content:'가설 [P1]'},{name:'review.md',content:'AI 자기검토 [P2]'}];
+test('structural pass never asserts factual or independent review validity',()=>{const q=auditLiterature(make(good));assert.equal(q.status,'passed');assert.equal(q.semanticVerified,false);assert.equal(q.independentReviewVerified,false);assert.equal(auditLiterature({type:'general'}),null);});
+test('missing empty duplicate unknown and omitted evidence labels require attention',()=>{for(const artifacts of [good.slice(0,2),good.map(a=>a.name==='ideas.md'?{...a,content:' '}:a),[...good,good[0]],good.map(a=>({...a,content:a.content+' P99'})),good.map(a=>a.name==='comparison.md'?{...a,content:'P1'}:a)])assert.equal(auditLiterature(make(artifacts)).status,'attention');});
+test('old results cannot satisfy a new execution and invalid manifests fail closed',()=>{const t=make(good);t.artifacts.forEach(a=>a.createdAt='2026-09-20T00:00:00Z');assert.equal(auditLiterature(t).status,'attention');t.prompt='inno-literature-evidence-v1';assert.equal(auditLiterature(t).status,'attention');});
+test('base64 text is decoded and explicit reviewer failure is surfaced',()=>{const t=make(good);t.artifacts[0]={...t.artifacts[0],encoding:'base64',content:btoa('P1 P2')};assert.equal(auditLiterature(t).status,'passed');t.checkpoint.content='검토 에이전트 호출 실패 후 자기검토';const q=auditLiterature(t);assert.equal(q.status,'attention');assert.ok(q.issues.some(x=>x.includes('검토')));assert.match(repairLiteraturePrompt(q),/comparison.md/);assert.match(repairLiteraturePrompt(q),/다시 연결/);});
+
+test('review failures in current assistant summary are surfaced but old failures are excluded',()=>{const t=make(good);t.messages=[{role:'assistant',createdAt:'2026-09-21T00:01:00Z',content:'검토 에이전트 호출 실패 후 자기검토'}];assert.equal(auditLiterature(t).status,'attention');t.messages[0].createdAt='2026-09-20T00:00:00Z';assert.equal(auditLiterature(t).status,'passed');});
