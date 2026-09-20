@@ -2,7 +2,7 @@ import {LocalRecords} from '../server/local-records.mjs';
 import {spawn} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
 import {createDesktopServer} from '../server/desktop-http.mjs';
-import {acquireBridgeLock,retryableStatus,checkRunStorage} from '../server/bridge-runtime.mjs';
+import {acquireBridgeLock,startupPortMessage,retryableStatus,checkRunStorage} from '../server/bridge-runtime.mjs';
 import {readFileSync,writeFileSync,renameSync,unlinkSync,existsSync,mkdirSync,readdirSync,statSync} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -26,13 +26,13 @@ if(process.platform==='win32'&&process.env.LOCALAPPDATA){
 }
 const runner=createCodexRunner({spawnProcess:(command,args,options)=>spawn(command==='codex'?codexCommand:command,args,options),cwd:path.join(privateDir,'desktop-runs'),managedDelivery:true});
 if(!await runner.available())throw Error('Sign in to Codex using your ChatGPT subscription before starting the desktop bridge.');
-const lock=await acquireBridgeLock();
+let lock;try{lock=await acquireBridgeLock();}catch(error){const message=startupPortMessage(error);if(!message)throw error;console.error(message);process.exit(1);}
 const bridge=createDesktopBridge({request,runner,outbox,beforeClaim:()=>checkRunStorage(path.join(privateDir,'desktop-runs')),onError:e=>console.error(e.status?'INNO result delivery HTTP '+e.status:'INNO execution interrupted; saved results are retained.')});
 const localTokenPath=path.join(privateDir,'desktop-access-token.txt');
 if(!existsSync(localTokenPath))writeFileSync(localTokenPath,randomBytes(32).toString('base64url'),{mode:0o600});
 const localToken=readFileSync(localTokenPath,'utf8').trim();
 const desktopServer=createDesktopServer({token:localToken,publicDir:path.join(root,'public'),request,bridge,localRecords:new LocalRecords(path.join(privateDir,'tasks.sqlite'))});
-try{await new Promise((resolve,reject)=>{desktopServer.once('error',reject);desktopServer.listen(4175,'127.0.0.1',resolve);});}catch(e){await lock.close();throw e;}
+try{await new Promise((resolve,reject)=>{desktopServer.once('error',reject);desktopServer.listen(4175,'127.0.0.1',resolve);});}catch(e){await lock.close();const message=startupPortMessage(e);if(!message)throw e;console.error(message);process.exit(1);}
 writeFileSync(path.join(privateDir,'DESKTOP-ACCESS.md'),'# Desktop cloud workspace\n\n[Open desktop cloud workspace](http://127.0.0.1:4175/#token='+encodeURIComponent(localToken)+')\n\nThis private link opens the same cloud tasks and reads selected sources locally. Do not share it.\n');
 let stopping=false,wake;
 for(const event of ['SIGINT','SIGTERM'])process.on(event,()=>{stopping=true;bridge.stop();wake?.();});

@@ -48,3 +48,7 @@
 - Real Codex subscription smoke task 262e7544-77a4-4fe4-9237-b05c80eb7251 completed with exact answer resource-check-ok, one persisted artifact, and zero remaining run folders for this task.
 - The event collector retained under 500 characters in the synthetic long-stream test. This is a retained-output assertion, not an end-to-end speed or total process memory benchmark.
 - Nonempty run directories remain intact. Child-process and tool memory/disk consumption are not globally capped by this change.
+
+## 2026-09-20 Startup port conflict
+
+122 tests pass. Real second launch at occupied4174 printed actionable guidance without a raw stack trace; existing authenticated desktop state remained HTTP200, idle and without pending output. Independent review found no material issues.4175 conflict closes only the lock newly acquired by that failed startup. No incumbent processes are terminated.
