@@ -1,3 +1,4 @@
+import {RunStorage} from '../server/run-storage.mjs';
 import {LocalRecords} from '../server/local-records.mjs';
 import {spawn} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
@@ -31,7 +32,7 @@ const bridge=createDesktopBridge({request,runner,outbox,beforeClaim:()=>checkRun
 const localTokenPath=path.join(privateDir,'desktop-access-token.txt');
 if(!existsSync(localTokenPath))writeFileSync(localTokenPath,randomBytes(32).toString('base64url'),{mode:0o600});
 const localToken=readFileSync(localTokenPath,'utf8').trim();
-const desktopServer=createDesktopServer({token:localToken,publicDir:path.join(root,'public'),request,bridge,localRecords:new LocalRecords(path.join(privateDir,'tasks.sqlite'))});
+const desktopServer=createDesktopServer({token:localToken,publicDir:path.join(root,'public'),request,bridge,runStorage:new RunStorage(path.join(privateDir,'desktop-runs')),localRecords:new LocalRecords(path.join(privateDir,'tasks.sqlite'))});
 try{await new Promise((resolve,reject)=>{desktopServer.once('error',reject);desktopServer.listen(4175,'127.0.0.1',resolve);});}catch(e){await lock.close();const message=startupPortMessage(e);if(!message)throw e;console.error(message);process.exit(1);}
 writeFileSync(path.join(privateDir,'DESKTOP-ACCESS.md'),'# Desktop cloud workspace\n\n[Open desktop cloud workspace](http://127.0.0.1:4175/#token='+encodeURIComponent(localToken)+')\n\nThis private link opens the same cloud tasks and reads selected sources locally. Do not share it.\n');
 let stopping=false,wake;

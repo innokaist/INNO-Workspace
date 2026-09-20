@@ -52,3 +52,11 @@
 ## 2026-09-20 Startup port conflict
 
 122 tests pass. Real second launch at occupied4174 printed actionable guidance without a raw stack trace; existing authenticated desktop state remained HTTP200, idle and without pending output. Independent review found no material issues.4175 conflict closes only the lock newly acquired by that failed startup. No incumbent processes are terminated.
+
+## 2026-09-20 Run storage management
+
+-128 tests pass, including completed-run selection, metadata changes, junction exclusion, prevalidation of all targets, maintenance exclusion, pending-result protection, authentication and explicit deletion confirmation.
+-Independent review found no material issues. Read-only inventory was subsequently placed under the same maintenance lock so it cannot delay an active runner heartbeat.
+-Browser fixture verified usage/selection totals, protected items, file list expansion, confirmation-gated delete button, and confirmation reset when selection changes. No UI deletion was performed; filesystem removal tests used temporary fixtures only.
+-Worker deployed version2b895cca-4fa7-4fae-b33b-7dddab01be11; idle desktop bridge restarted. Live read-only storage endpoint returned0 bytes,2 entries,2 completed eligible folders. User data deleted:0.
+-Temporary UI server/script/tab removed after verification.

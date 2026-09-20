@@ -19,6 +19,10 @@ export function createDesktopBridge({request,runner,outbox,heartbeatMs=15000,bef
   stop(){stopped=true;controller?.abort();},
   settled:()=>background,
   status:()=>({busy,stopped,pending:!!outbox.read()}),
+  async maintenance(work){
+   if(busy||stopped||outbox.read())throw Object.assign(Error('실행 중이거나 미전달 결과가 있어 정리할 수 없습니다.'),{status:409});
+   busy=true;try{return await work();}finally{busy=false;}
+  },
   async startTask(taskId,input){
    if(busy||stopped||outbox.read())throw Object.assign(Error('Desktop is busy or has a pending result. Wait before starting another task.'),{status:409});
    const materials=sanitizeMaterials(input.materials);busy=true;

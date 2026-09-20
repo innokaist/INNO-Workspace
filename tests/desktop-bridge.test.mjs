@@ -25,3 +25,5 @@ test('desktop failure outbox preserves safe quota reason across delivery retry w
 });
 
 test('occupied startup port becomes an actionable error without hiding other failures',async()=>{const {startupPortMessage}=await import('../server/bridge-runtime.mjs');assert.match(startupPortMessage({code:'EADDRINUSE',port:4174}),/4174/);assert.match(startupPortMessage({code:'EADDRINUSE',port:4175}),/4175/);assert.match(startupPortMessage({code:'EADDRINUSE',port:4174}),/DESKTOP-ACCESS/);assert.equal(startupPortMessage({code:'EACCES',port:4174}),null);});
+
+test('maintenance blocks execution and refuses pending results',async()=>{const outbox=box();let polls=0,release;const bridge=createDesktopBridge({outbox,request:async()=>{polls++;return {claim:null};},runner:{}});const work=bridge.maintenance(()=>new Promise(r=>release=r));await bridge.tick();assert.equal(polls,0);await assert.rejects(()=>bridge.startTask('t',{materials:[]}),{status:409});release();await work;assert.equal(bridge.status().busy,false);outbox.write({taskId:'pending'});await assert.rejects(()=>bridge.maintenance(()=>{}),{status:409});});

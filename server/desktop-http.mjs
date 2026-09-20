@@ -7,7 +7,7 @@ import path from 'node:path';
 const MIME={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
 const json=(res,status,data)=>{res.writeHead(status,{'content-type':'application/json','cache-control':'no-store'});res.end(JSON.stringify(data));};
 async function body(req){let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>750000)throw Object.assign(Error('Request exceeds 750000 bytes'),{status:413});chunks.push(chunk);}try{return JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}');}catch{throw Object.assign(Error('Invalid JSON'),{status:400});}}
-export function createDesktopServer({token,publicDir,request,bridge,localRecords}){
+export function createDesktopServer({token,publicDir,request,bridge,localRecords,runStorage}){
  if(typeof token!=='string'||token.length<24)throw Error('A strong local token is required');
  const root=path.resolve(publicDir instanceof URL?fileURLToPath(publicDir):publicDir);
  const server=createServer(async(req,res)=>{
@@ -19,7 +19,9 @@ export function createDesktopServer({token,publicDir,request,bridge,localRecords
    if(p.startsWith('/api/')){
     const expected=Buffer.from('Bearer '+token),actual=Buffer.from(req.headers.authorization||'');
     if(actual.length!==expected.length||!timingSafeEqual(actual,expected))return json(res,401,{error:'unauthorized'});
-    if(req.method==='GET'&&p==='/api/state'){const state=await request(p);return json(res,200,{...state,capabilities:{...state.capabilities,desktopSources:true,localRecordImport:!!localRecords},localDesktop:bridge.status()});}
+    if(req.method==='GET'&&p==='/api/state'){const state=await request(p);return json(res,200,{...state,capabilities:{...state.capabilities,desktopSources:true,localRecordImport:!!localRecords,runStorage:!!runStorage},localDesktop:bridge.status()});}
+    if(runStorage&&req.method==='GET'&&p==='/api/run-storage'){const view=await bridge.maintenance(async()=>{const state=await request('/api/state');return runStorage.list(state.tasks);});return json(res,200,{...view,desktop:bridge.status()});}
+    if(runStorage&&req.method==='POST'&&p==='/api/run-storage/remove'){const input=await body(req);if(input.confirm!==true)return json(res,400,{error:'삭제 확인이 필요합니다.'});const result=await bridge.maintenance(async()=>{const state=await request('/api/state');return runStorage.remove(input.runs,state.tasks);});return json(res,200,result);}
     if(localRecords&&req.method==='GET'&&p==='/api/local-records')return json(res,200,await localRecords.list(url.searchParams.get('cursor')||''));
     if(localRecords&&req.method==='POST'&&p==='/api/local-records/import'){
      const input=await body(req);const task=await localRecords.read(input.id,input.hash);
