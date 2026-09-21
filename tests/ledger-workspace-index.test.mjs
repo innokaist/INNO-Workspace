@@ -1,0 +1,3 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import vm from 'node:vm';import {parseLedgerIndex} from '../public/core/experiment-links.mjs';
+const context=vm.createContext({});vm.runInContext(readFileSync(new URL('../scripts/ledger-workspace-index.js',import.meta.url),'utf8'),context);
+test('Ledger exporter is consumed by Workspace without credentials or blobs',()=>{const data=context.innoWorkspaceIndex({fb:{user:{uid:'SECRET'}},runs:{r:{id:'r',lotId:'1',issuedBy:'SECRET',file:{name:'x.h5',blobChunks:['SECRET'],hashPrefix:'SECRET'},prism:{token:'SECRET'}}}});const json=JSON.stringify(data);assert.equal(json.includes('SECRET'),false);assert.equal(parseLedgerIndex(json)[0].id,'r');});

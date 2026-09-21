@@ -224,3 +224,7 @@ node .inno/tools/npm/package/bin/npx-cli.js --yes wrangler@4 deploy
 ## 선택 문헌 비교
 
 연구 자료에서 문헌 2~8편을 선택해 비교 요청과 임시 자료를 준비할 수 있습니다. [실행 및 재연결 안내](LITERATURE-WORKFLOW.md)를 참고하세요. 전체 완료 여부와 남은 단계는 [요구사항 진행표](REQUIREMENTS-STATUS.md)에 구분했습니다.
+
+## 합성·측정·분석 연결
+
+연구 자료 화면에서 NanoLab 백업, Ledger 연결 색인, Prism 분석 JSON을 연결합니다. [파일 준비·Run 선택·재개 안내](EXPERIMENT-LINKS.md)를 참고하세요.

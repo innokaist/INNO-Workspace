@@ -1,3 +1,5 @@
+import {experimentPacket} from './core/experiment-links.mjs';
+import {createExperimentLinks} from './experiment-links.mjs';
 import {buildLiteratureReview} from './core/literature-review.mjs';
 import {auditLiterature,repairLiteraturePrompt} from './core/literature-quality.mjs';
 const literatureAudits=new WeakMap();
@@ -205,3 +207,5 @@ async function prepareSeparateReview(){
  newTask();$('task-type').value=review.type;$('prompt').value=review.prompt;await addFiles([source,file]);
  toast('별도 검토 요청을 준비했습니다. 작업 기록 후 실행하세요.');
 }
+
+createExperimentLinks({root:$('experiment-links'),prepareTask:async result=>{if($('prompt').value.trim())throw Error('작성 중인 요청을 먼저 기록하거나 비워 주세요.');const packet=await experimentPacket(result);const file=new File([packet.text],packet.name,{type:'application/json',lastModified:0});newTask();$('task-type').value='analysis';$('prompt').value='연결된 실험 요약의 출처·불일치·추가 확인 사항을 정리해 주세요. 원시 측정 데이터나 합성 조건 전체를 읽은 것으로 표현하지 마세요. PA 하한 여부와 단위를 유지하고 인과관계는 단정하지 마세요.\n시료 ID: '+result.sampleId+'\n실험 ID: '+result.experimentId;await addFiles([file]);toast('연결 메타데이터로 작업을 준비했습니다. 원시 데이터 분석에는 해당 원본도 연결하세요.');}});

@@ -1,0 +1,29 @@
+# 합성·측정·분석 연결
+
+NanoLab의 serial → Ledger의 lotId와 Run id → 사용자가 지정한 Prism 결과를 연결합니다. 연구 그룹 ID는 사용자가 관리하는 이름으로, 계정 일치를 자동으로 증명하지 않습니다. 같은 계정에서 내보낸 자료를 사용하세요.
+
+## 사용 순서
+
+1. NanoLab에서 JSON 백업을 내보냅니다. 설정 정보가 포함될 수 있는 백업 원본은 공유하지 마세요. Workspace는 필요한 합성 필드만 메모리에 남깁니다.
+2. 로컬 E:\Develop\INNO Ledger\INNO Ledger.html을 다시 열고 로그인합니다. 설정 → 동기화 → **Workspace 연결 색인 내보내기**를 누릅니다. Run 목록 수신 후 활성화됩니다. 원시 파일·blob·이메일·UID·인증 설정은 내보내지 않습니다.
+3. Prism에서 측정의 분석 JSON을 내보냅니다.
+4. Workspace → 연구 자료 → 합성·측정·분석 연결에서 연구 그룹 ID(예: my-lab)와 세 JSON을 지정합니다.
+5. Run ID·lot ID·파일명으로 검색하고 연결할 Run을 직접 선택합니다. 검색 결과는 최대 50개를 표시합니다.
+6. **연결 확인**에서 계보·출처·분석값·단위·경고를 확인합니다. 파일명이 같아도 내용 동일성은 확인되지 않습니다.
+7. **연결표 JSON 내려받기**로 생성된 요약을 보관하거나 **연결 자료로 작업 준비**를 누르고 요청을 수정·기록·실행합니다. 준비 버튼은 AI를 자동 실행하지 않습니다. 원시 데이터 분석에는 해당 원본도 따로 연결하세요.
+
+## 범위와 보관
+
+NanoLab의 serial/name/type/date/src.serial, Ledger의 식별자·파일 참조, Prism의 엔진·출처·주요 스칼라 분석값을 연결합니다. PA 하한·격자 제한·보고 간격과 파워 단위를 보존합니다. 합성 조건 전체·원시 h5·피팅 곡선·전체 진단·보정 유효성 검증은 포함하지 않습니다.
+
+입력은 현재 탭에서만 조회합니다. 초기화나 탭 종료 후 다시 연결해야 합니다. 명시적으로 내려받은 연결표와 생성된 AI 결과는 남습니다. 작업 첨부는 내용 해시로 식별하므로 다른 연결표가 기존 자료를 대체하지 않습니다. 재개하려면 동일 자료·그룹 ID·Run으로 다시 준비한 뒤 새 초안을 기록하지 않고 기존 작업을 여세요.
+
+JSON당 10 MB, 합성과 Run 각각 10000개까지 지원합니다. 중복 ID는 오류이며, 누락된 합성/상위 합성과 파일명 불일치는 경고합니다. 경고가 있어도 연결표를 만들 수 있으므로 연구 활용 전에 확인하세요. Firebase 상시 동기화나 원시 데이터 자동 수집은 아직 제공하지 않습니다.
+
+## Ledger 설치 범위
+
+로컬 Ledger HTML에만 버튼을 추가했습니다. 별도 Ledger 웹 배포본은 변경하지 않았습니다. 원본 백업은 Workspace/.inno/ledger-before-workspace-export.html입니다. 설치 소스는 scripts/ledger-workspace-index.js와 scripts/install-ledger-workspace-export.mjs에 있습니다.
+
+다른 사본에 적용하려면 Workspace에서 아래 명령에 대상 경로를 지정합니다. 기존 백업이 있으면 새 설치를 중단하므로 백업을 안전하게 보관한 후 진행하세요. 구조가 달라진 Ledger에는 자동 적용하지 않습니다.
+
+    node scripts/install-ledger-workspace-export.mjs "E:\Develop\INNO Ledger\INNO Ledger.html"
