@@ -1,6 +1,8 @@
 # INNO Workspace
 
-파일을 연결해 조회하고, 작업의 맥락을 이어가는 개인 연구 작업실.
+연구와 일반 업무를 독립적으로 수행하고, 작업의 맥락을 이어가는 개인 AI 작업실.
+
+INNO Workspace는 다른 INNO 앱 없이 사용할 수 있는 독립 플랫폼입니다. NanoLab·Prism·RefAtlas·Scheduler·Analytics·Ledger 연결은 필요한 작업에서만 사용하는 선택 기능이며, 설치나 연결을 기본 사용 조건으로 삼지 않습니다. 일반 파일·폴더와 직접 작성한 요청으로도 작업을 시작합니다.
 
 [클라우드 작업실](https://inno-workspace-api.innokaist.workers.dev) · [GitHub Pages 화면](https://innokaist.github.io/INNO-Workspace/)
 
@@ -40,7 +42,7 @@ Windows에서는 `Start INNO Workspace.cmd`를 실행해도 됩니다. 컴퓨터
 | 원본 연결·미리보기 | 브라우저 File APIs, 메모리만 사용; 텍스트·PDF·DOCX·PPTX 조회 |
 | 문헌 검색 | RefAtlas JSON을 세션에 연결 후 검색, DOI와 읽기 범위 표시 |
 | 광학 분석 결과 조회 | Prism JSON의 분석과 보정 출처 유지 |
-| 기존 여섯 앱 | 기존 앱/저장소 링크, RefAtlas·Prism의 JSON 입력 |
+| 선택적 외부 앱 연계 | 기존 앱/저장소 링크, RefAtlas·Prism 등의 선택적 JSON 입력. 핵심 실행의 필수 조건 아님 |
 | 실제 AI 실행 | 로그인한 로컬 Codex 또는 사용자가 구성한 Claude Routine |
 | 에이전트 역할 | 요청별 기본 계획, 사용자 편집, 실행기의 계획 갱신 도구 |
 | 결과물 | 실제 생성된 텍스트·Markdown·SVG 및 검증된 파일 다운로드 |
