@@ -1,5 +1,5 @@
-import {experimentPacket} from './core/experiment-links.mjs';
-import {createExperimentLinks} from './experiment-links.mjs';
+import {experimentPacket} from './core/experiment-links.mjs?v=direct-1';
+import {createExperimentLinks} from './experiment-links.mjs?v=direct-1';
 import {buildLiteratureReview} from './core/literature-review.mjs';
 import {auditLiterature,repairLiteraturePrompt} from './core/literature-quality.mjs';
 const literatureAudits=new WeakMap();

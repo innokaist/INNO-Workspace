@@ -228,3 +228,5 @@ node .inno/tools/npm/package/bin/npx-cli.js --yes wrangler@4 deploy
 ## 합성·측정·분석 연결
 
 연구 자료 화면에서 NanoLab 백업, Ledger 연결 색인, Prism 분석 JSON을 연결합니다. [파일 준비·Run 선택·재개 안내](EXPERIMENT-LINKS.md)를 참고하세요.
+
+현재 실험 연결 기본값은 **NanoLab → Prism 직접 연결**입니다. Ledger 없이 두 JSON과 시료·실험 ID만 지정하면 됩니다. [최신 직접 연결 안내](EXPERIMENT-LINKS.md)를 참고하세요.

@@ -19,3 +19,13 @@ export function linkExperiment(namespace,lots,runs,runId,prismText){
 }
 
 export async function experimentPacket(result){const text=JSON.stringify(result,null,2);const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),b=>b.toString(16).padStart(2,'0')).join('');return {text,name:'INNO-experiment-'+hash+'.json'};}
+
+export function linkDirectExperiment(namespace,lots,serial,experimentId,prismText){
+ const lot=lots.find(l=>l.serial===serial);if(!lot)throw Error('NanoLab 시료를 선택하세요.');
+ const experiment=id(experimentId).trim();
+ const base=linkExperiment(namespace,lots,[{id:experiment,lotId:serial,file:{name:''}}],experiment,prismText);
+ const warnings=['사용자가 지정한 시료 연결입니다. 원본 파일 동일성·보정 유효성·분석 정확성은 검증하지 않았습니다.'];
+ if(lot.parentSerial&&!lots.some(l=>l.serial===lot.parentSerial))warnings.push('상위 합성 기록이 연결되지 않았습니다.');
+ if(!base.prism.sourceFile)warnings.push('Prism 출처 파일명이 없습니다.');
+ return {...base,experimentId:namespace+':experiment:'+encodeURIComponent(experiment),matchMethod:'user-selected-sample',run:null,warnings};
+}

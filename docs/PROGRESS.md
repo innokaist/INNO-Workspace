@@ -50,3 +50,7 @@ Task 4: GitHub source and Pages published, Cloudflare Worker/D1 deployed. Live a
 ## 2026-09-21 — 실험 연결 첫 흐름
 
 실제 앱 스키마를 확인해 NanoLab serial → Ledger lotId/Run id → 사용자 지정 Prism 결과 연결을 구현했다. 원본은 세션에서 조회하며 허용된 메타데이터와 주요 분석값만 작업에 연결한다. 로컬 Ledger HTML에 백업 후 색인 내보내기를 추가했다. 웹 Ledger 배포는 변경하지 않았다. 자동 파일 동일성 검증·전체 합성/측정 데이터 통합은 후속 범위이다.
+
+## 2026-09-21 — Ledger 의존 제거
+
+사용자 요청에 따라 NanoLab 시료 + Prism 분석 직접 연결을 기본값으로 변경했다. Ledger는 선택한 경우에만 사용한다. 직접 실험 ID는 기존 Run ID와 구분한다. 가상 자료로 Ledger 없이 시료 선택·연결 확인·작업 준비 전달을 검증했다.
