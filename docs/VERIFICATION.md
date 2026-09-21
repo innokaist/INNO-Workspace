@@ -123,3 +123,6 @@
 - 실제 설치된 Codex model/list에서 Astra/Sol/Terra/Luna 지원 확인. 합성 letter-count 작업에서 네이티브 하위 호출 대기 이벤트와 4 반환 확인. Luna/low 선택은 실행기 자기보고이며 이벤트가 실제 모델 ID를 별도 제공하지 않아 runtimeVerified=false 유지.
 - 이 테스트는 위임 기능 시험이며 토큰 절감률·연구 품질 동등성 검증이 아님. 짧은 작업에 위임하는 비용 때문에 기본 정책은 직접 처리.
 - 리뷰에서 발견한 final.md 누락 및 배정 보고서로 인한 용량 초과 회귀 수정. Claude 실제 클라우드 실행은 별도 확인 필요.
+
+- Cloudflare 86746fc8-db04-4a81-bc79-5410512b2d64 배포, 유휴 데스크톱 브리지 갱신 완료.
+- Claude 실제 구독 Routine 합성 작업 b610ee6b-38a5-4a48-8112-b7ef2a652e81 완료. 위임 전 배정 체크포인트 → final.md → inno-model-routing.json → completed 반환 확인. 보고서는 inno-haiku 호출 및 4 반환을 자기보고하며 실제 서빙 모델 버전은 관측되지 않아 observedModel=null, runtimeVerified=false를 유지함. 연구 품질·절감률 검증은 아님.
