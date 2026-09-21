@@ -24,7 +24,7 @@ export class CloudBridge {
     await this.seen();
     const expired=await this.store.db.prepare("SELECT body FROM tasks WHERE json_extract(body,'$.status')='running' AND json_extract(body,'$.checkpoint.provider')='codex' AND json_extract(body,'$.checkpoint.expiresAt') < ?1 ORDER BY updated_at ASC LIMIT 1").bind(this.store.now()).first();
     if(expired){const t=JSON.parse(expired.body);try{await this.store.replaceTask(t.id,t.version,current=>({...current,status:'paused',version:current.version+1,updatedAt:this.store.now(),checkpoint:{...current.checkpoint,status:'paused',interruptedBy:'lease_expiry',interruptedVersion:current.version+1,failure:failureRecord({failure:{kind:'interrupted'}},this.store.now())}}));}catch(e){if(!(e instanceof ConflictError))throw e;}}
-    const row=await this.store.db.prepare("SELECT body FROM tasks WHERE json_extract(body,'$.status')='queued' ORDER BY updated_at ASC LIMIT 1").first();
+    const row=await this.store.db.prepare("SELECT body FROM tasks WHERE json_extract(body,'$.status')='queued' AND json_extract(body,'$.checkpoint.provider')='codex' ORDER BY updated_at ASC LIMIT 1").first();
     if(!row)return null;
     const t=JSON.parse(row.body);
     if(t.checkpoint?.provider!=='codex')return null;

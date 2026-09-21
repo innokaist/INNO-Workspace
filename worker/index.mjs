@@ -1,3 +1,4 @@
+import {handoffContext} from '../public/core/provider-handoff.mjs';
 import {CLAUDE_ROUTING_POLICY} from '../public/core/claude-routing.mjs';
 import {parseRevision} from '../public/core/sync.mjs';
 import {failureInput,runnerError} from '../public/core/failures.mjs';
@@ -73,6 +74,7 @@ function routineText(task, materials, ownership) {
     conversation || '- No additional messages.',
     'Last durable checkpoint:',
     checkpoint ? String(checkpoint).slice(0, 8_000) : '- No checkpoint.',
+    handoffContext(task),
     'Role plan:',
     plan || '- Use a single executor role.',
     'Transient excerpts:',
@@ -124,6 +126,23 @@ export function createWorker({fetchFn = fetch} = {}) {
         const store = new D1TaskStore(env.DB);
         const bridge = new CloudBridge(store);
         const hasRoutine = routineConfigured(env);
+        const handoff=async input=>{
+          let task=await store.handoffExecution(input.taskId,input);
+          if(task.status!=='queued'||task.checkpoint?.provider!=='claude'||task.checkpoint?.handoff?.dispatched)return task;
+          if(!hasRoutine)return store.markWaiting(task.id,{expectedVersion:task.version,provider:'claude',reason:'Claude Routine is not configured.'});
+          let claim;
+          for(let attempt=0;attempt<3;attempt++){
+            if(task.status!=='queued'||task.checkpoint?.provider!=='claude'||task.checkpoint?.handoff?.dispatched)return task;
+            try{claim=await store.claimExecution(task.id,{provider:'claude',expectedVersion:task.version});break;}
+            catch(error){if(!(error instanceof ConflictError)||attempt===2)throw error;task=await store.requireTask(task.id);}
+          }
+          const execution=(async()=>{
+            try{const fired=await fireRoutine(fetchFn,env,claim.task,[],claim);await store.leaveExecutionRunning(task.id,{...claim,sessionUrl:fired.claude_code_session_url,checkpoint:'Claude handoff session started.'});}
+            catch(error){const current=await store.requireTask(task.id);if(current.status==='running'&&current.checkpoint?.executionId===claim.executionId)await store.failExecution(task.id,{...claim,...failureInput(error?.code?error:runnerError(error))});}
+          })();
+          if(context.waitUntil)context.waitUntil(execution);else await execution;
+          return claim.task;
+        };
         const capabilities = {cloudCodex: true, localCodex: false, claudeRoutine: hasRoutine, cloud: true, connected: true};
 
         if (request.method === 'GET' && pathname === '/api/state') {
@@ -136,7 +155,7 @@ export function createWorker({fetchFn = fetch} = {}) {
           return responseJson({task: await store.createTask(await body(request))}, 201, headers);
         }
         if (request.method === 'POST' && pathname === '/mcp') {
-          return responseJson(await handleMcp(store, await body(request)), 200, headers);
+          return responseJson(await handleMcp(store, await body(request),{handoff}), 200, headers);
         }
         const actionMatch = pathname.match(/^\/api\/tasks\/([^/]+)\/actions$/);
         if (request.method === 'POST' && actionMatch) {
@@ -150,6 +169,7 @@ export function createWorker({fetchFn = fetch} = {}) {
         if(request.method==='POST'&&bridgeMatch){
           const id=decodeURIComponent(bridgeMatch[1]), input=await body(request);
           if(bridgeMatch[2]==='start')return responseJson({claim:await bridge.start(id,input)},200,headers);
+          if(bridgeMatch[2]==='complete'&&input.handoff)return responseJson({task:await handoff({...input,taskId:id})},200,headers);
           const task=bridgeMatch[2]==='renew'?await bridge.renew(id,input):bridgeMatch[2]==='complete'?await bridge.complete(id,input):await bridge.fail(id,input);
           return responseJson({task},200,headers);
         }

@@ -13,7 +13,7 @@ export function createDesktopBridge({request,runner,outbox,heartbeatMs=15000,bef
   finally{clearInterval(timer);if(renewal)await renewal;}
   if(monitorError)throw monitorError;
   if(controller.signal.aborted)throw Error('Desktop execution stopped');
-  const record={taskId:task.id,action:runError?'fail':'complete',input:runError?{...owner,...failureInput(runError.code?runError:runnerError(runError))}:{...owner,content:result.content,checkpoint:result.checkpoint,artifacts:result.artifacts,usage:usageCounts(result.usage)}};
+  const record={taskId:task.id,action:runError?'fail':'complete',input:runError?{...owner,...failureInput(runError.code?runError:runnerError(runError))}:{...owner,content:result.content,checkpoint:result.checkpoint,artifacts:result.artifacts,usage:usageCounts(result.usage),...(result.handoff?{handoff:result.handoff}:{})}};
   outbox.write(record);await deliver(record);return true;
  }
  return {

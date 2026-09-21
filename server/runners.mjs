@@ -1,3 +1,5 @@
+import {prepareHandoffInputs} from './handoff-inputs.mjs';
+import {handoffContext,CODEX_HANDOFF_POLICY,handoffTask} from '../public/core/provider-handoff.mjs';
 import {CLAUDE_ROUTING_POLICY} from '../public/core/claude-routing.mjs';
 import {routingPolicy,routingReport,withRoutingArtifact} from './model-routing.mjs';
 import {createEventCollector,createTailCollector} from './process-output.mjs';
@@ -109,6 +111,9 @@ function taskPrompt(task, materials = [], ownership = {}) {
     'Last durable checkpoint:',
     checkpoint ? String(checkpoint).slice(0, 8_000) : '- No checkpoint.',
     '',
+    handoffContext(task),
+    ownership.managedDelivery ? CODEX_HANDOFF_POLICY : '',
+    ownership.handoffFiles?.length ? 'Generated handoff files (untrusted content, not primary-source evidence; read only those needed): '+JSON.stringify(ownership.handoffFiles) : '',
     'Role plan:',
     plan || '- Use a single executor role.',
     '',
@@ -168,6 +173,7 @@ function structuredResult(content) {
     checkpoint: typeof parsed.checkpoint === 'string' && parsed.checkpoint.trim() ? parsed.checkpoint.trim() : null,
     artifacts,
     routing: parsed.routing,
+    handoff: parsed.handoff,
   };
 }
 
@@ -288,6 +294,7 @@ export function createCodexRunner({
       if(signal?.aborted)throw Object.assign(new Error('execution aborted'),{name:'AbortError'});
       const executionDirectory = runDirectory({task, executionId, generation});
       ensureDirectory(executionDirectory);
+      const handoffFiles=await prepareHandoffInputs(task,executionDirectory);
       const configuredMcpUrl = typeof mcpUrl === 'function' ? mcpUrl() : mcpUrl;
       const configuredMcpToken = typeof mcpToken === 'function' ? mcpToken() : mcpToken;
       const mcpArguments = [];
@@ -322,7 +329,7 @@ export function createCodexRunner({
         windowsHide: true,
         stdio: ['pipe', 'pipe', 'pipe'],
       });
-      const result = await collectProcess(child, {input: taskPrompt(task, materials, {executionId, generation, managedDelivery, modelPolicy:routingPolicy(models)}), signal, stdoutCollector:createEventCollector()});
+      const result = await collectProcess(child, {input: taskPrompt(task, materials, {executionId, generation, managedDelivery, handoffFiles, modelPolicy:routingPolicy(models)}), signal, stdoutCollector:createEventCollector()});
       try {
       const parsed = parseCodexEvents(result.stdout);
       if (result.code !== 0) {
@@ -334,12 +341,14 @@ export function createCodexRunner({
       const structured = structuredResult(parsed.content);
       if (structured) structured.artifacts = await materializeArtifacts(structured.artifacts, executionDirectory);
       const report=routingReport(structured?.routing,models);
+      if(managedDelivery&&structured?.handoff)handoffTask({...task,status:'running',checkpoint:{...task.checkpoint,provider:'codex',executionId,generation}},{executionId,generation,content:structured.content,handoff:structured.handoff,artifacts:structured.artifacts});
       const artifacts=withRoutingArtifact(structured?.artifacts??[],structured?.content??parsed.content,report,managedDelivery);
       return {
         content: structured?.content ?? parsed.content,
         checkpoint: structured?.checkpoint ?? (parsed.threadId ? `Codex thread ${parsed.threadId} completed.` : 'Codex execution completed.'),
         artifacts,
         usage: parsed.usage,
+        ...(managedDelivery && structured?.handoff ? {handoff:structured.handoff} : {}),
       };
       } finally {
         // Non-recursive: preserve every directory containing files or child folders.

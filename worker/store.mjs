@@ -1,3 +1,4 @@
+import {handoffTask,isHandoffReplay} from '../public/core/provider-handoff.mjs';
 import {executionUsage} from '../public/core/execution-usage.mjs';
 import {failureRecord} from '../public/core/failures.mjs';
 import {
@@ -154,7 +155,7 @@ export class D1TaskStore {
       return {
         ...current, status: 'running', version: current.version + 1, updatedAt: now,
         checkpoint: {
-          ...previous, failure: undefined, ...claim, provider, status: 'running', claimedAt: now,
+          ...previous, ...(previous.handoff?{handoff:{...previous.handoff,dispatched:true}}:{}), failure: undefined, ...claim, provider, status: 'running', claimedAt: now,
           expiresAt: new Date(nowMs + leaseMs).toISOString(), updatedAt: now,
         },
       };
@@ -167,6 +168,15 @@ export class D1TaskStore {
       || task.checkpoint?.executionId !== input.executionId
       || task.checkpoint?.generation !== input.generation
     ) throw new ConflictError('stale execution owner cannot write this task', task.version);
+  }
+
+  async handoffExecution(id,input){
+    for(let attempt=0;attempt<3;attempt++){
+      const task=await this.requireTask(id);
+      if(isHandoffReplay(task,input))return task;
+      try{return await this.replaceTask(id,task.version,current=>handoffTask(current,input,{now:this.now,id:this.id,recoverInterrupted:true}));}
+      catch(error){if(!(error instanceof ConflictError)||attempt===2)throw error;}
+    }
   }
 
   async finishExecution(id, input, {recoverInterrupted = false} = {}) {

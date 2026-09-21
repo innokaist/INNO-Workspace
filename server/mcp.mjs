@@ -1,3 +1,10 @@
+const HANDOFF_TOOL={
+ name:'handoff_task',description:'Sequentially hand off to the other subscription provider, with no source attachments and at most two transitions. Save generated progress, then stop writing under the old lease.',
+ inputSchema:{type:'object',required:['taskId','executionId','generation','content','handoff'],additionalProperties:false,properties:{
+  taskId:{type:'string'},executionId:{type:'string'},generation:{type:'integer'},content:{type:'string',maxLength:12000},
+  handoff:{type:'object',required:['provider','instructions','reason','acceptance'],additionalProperties:false,properties:{provider:{enum:['codex','claude']},instructions:{type:'string',maxLength:12000},reason:{type:'string',maxLength:1000},acceptance:{type:'string',maxLength:2000}}}
+ }}
+};
 const TOOLS = Object.freeze([
   {
     name: 'list_tasks',
@@ -83,8 +90,11 @@ function toolResult(value) {
   return {content: [{type: 'text', text: JSON.stringify(value)}]};
 }
 
-async function callTool(store, name, args = {}) {
+async function callTool(store, name, args = {}, handlers = {}) {
   switch (name) {
+    case 'handoff_task':
+      if(!handlers.handoff)throw new Error('Provider handoff is unavailable in this environment');
+      return toolResult({task:await handlers.handoff(args)});
     case 'list_tasks':
       return toolResult({tasks: await store.listTasks()});
     case 'read_task': {
@@ -123,7 +133,7 @@ async function callTool(store, name, args = {}) {
   }
 }
 
-export async function handleMcp(store, message) {
+export async function handleMcp(store, message, handlers = {}) {
   const id = message?.id ?? null;
   if (!message || message.jsonrpc !== '2.0' || typeof message.method !== 'string') {
     return {jsonrpc: '2.0', id, error: {code: -32600, message: 'Invalid Request'}};
@@ -139,10 +149,10 @@ export async function handleMcp(store, message) {
     };
   }
   if (message.method === 'ping') return {jsonrpc: '2.0', id, result: {}};
-  if (message.method === 'tools/list') return {jsonrpc: '2.0', id, result: {tools: TOOLS}};
+  if (message.method === 'tools/list') return {jsonrpc:'2.0',id,result:{tools:handlers.handoff?[...TOOLS,HANDOFF_TOOL]:TOOLS}};
   if (message.method === 'tools/call') {
     try {
-      const result = await callTool(store, message.params?.name, message.params?.arguments ?? {});
+      const result = await callTool(store, message.params?.name, message.params?.arguments ?? {}, handlers);
       return {jsonrpc: '2.0', id, result};
     } catch (error) {
       return {
