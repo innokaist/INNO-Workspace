@@ -10,3 +10,5 @@ test('old results cannot satisfy a new execution and invalid manifests fail clos
 test('base64 text is decoded and explicit reviewer failure is surfaced',()=>{const t=make(good);t.artifacts[0]={...t.artifacts[0],encoding:'base64',content:btoa('P1 P2')};assert.equal(auditLiterature(t).status,'passed');t.checkpoint.content='검토 에이전트 호출 실패 후 자기검토';const q=auditLiterature(t);assert.equal(q.status,'attention');assert.ok(q.issues.some(x=>x.includes('검토')));assert.match(repairLiteraturePrompt(q),/comparison.md/);assert.match(repairLiteraturePrompt(q),/다시 연결/);});
 
 test('review failures in current assistant summary are surfaced but old failures are excluded',()=>{const t=make(good);t.messages=[{role:'assistant',createdAt:'2026-09-21T00:01:00Z',content:'검토 에이전트 호출 실패 후 자기검토'}];assert.equal(auditLiterature(t).status,'attention');t.messages[0].createdAt='2026-09-20T00:00:00Z';assert.equal(auditLiterature(t).status,'passed');});
+
+test('separate review task is not mistaken for original literature workflow',()=>{const t=make(good);t.prompt='inno-literature-review-v1 '+t.prompt;assert.equal(auditLiterature(t),null);});

@@ -7,6 +7,7 @@ function decode(a){
  return a.content;
 }
 export function auditLiterature(task){
+ if(task?.prompt?.startsWith('문헌 결과 별도 검토 — inno-literature-review-v1')||task?.prompt?.startsWith('inno-literature-review-v1'))return null;
  if(!task||task.type!=='literature'||!task.prompt?.includes('inno-literature-evidence-v1')||task.status!=='completed')return null;
  const issues=[];let labels=[];
  try{const start=task.prompt.lastIndexOf(marker);if(start<0)throw Error();const manifest=JSON.parse(task.prompt.slice(start+marker.length).trim());if(!Array.isArray(manifest)||manifest.length<2||manifest.length>8||manifest.some((p,i)=>p.label!=='P'+(i+1)))throw Error();labels=manifest.map(p=>p.label);}catch{issues.push('문헌 목록을 확인할 수 없습니다. 요청의 목록을 확인하세요.');}
