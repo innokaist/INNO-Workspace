@@ -1,3 +1,4 @@
+import {executionUsage} from '../public/core/execution-usage.mjs';
 import {failureRecord} from '../public/core/failures.mjs';
 import { DatabaseSync } from 'node:sqlite';
 
@@ -265,6 +266,7 @@ export class SqliteTaskStore {
         artifacts: [...task.artifacts, ...artifacts],
         checkpoint: {
           ...task.checkpoint,
+          usage: executionUsage(task.checkpoint,input.usage,now),
           status: 'completed',
           failure: undefined,
           content: input.checkpoint ?? 'Execution completed.',

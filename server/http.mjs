@@ -132,7 +132,6 @@ export function createInnoServer({
           generation: claim.generation,
           signal: controller.signal,
         });
-        if (result?.usage) store.recordUsage(provider, result.usage);
         if (result?.sessionUrl) {
           store.leaveExecutionRunning(taskId, {
             executionId: claim.executionId,
@@ -147,6 +146,7 @@ export function createInnoServer({
             content: result?.content,
             checkpoint: result?.checkpoint,
             artifacts: result?.artifacts,
+            usage: result?.usage,
           });
         }
       } catch (error) {

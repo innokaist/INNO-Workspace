@@ -1,3 +1,4 @@
+import {executionUsage} from '../public/core/execution-usage.mjs';
 import {failureRecord} from '../public/core/failures.mjs';
 import {
   ConflictError,
@@ -203,7 +204,7 @@ export class D1TaskStore {
         ...current, status: 'completed', version: current.version + 1, updatedAt: now,
         messages: [...current.messages, {id: this.id(), role: 'assistant', content, createdAt: now}],
         artifacts: [...current.artifacts, ...artifacts],
-        checkpoint: {...current.checkpoint, failure: undefined, status: 'completed', content: input.checkpoint ?? 'Execution completed.', completedAt: now, updatedAt: now},
+        checkpoint: {...current.checkpoint, usage: executionUsage(current.checkpoint,input.usage,now), failure: undefined, status: 'completed', content: input.checkpoint ?? 'Execution completed.', completedAt: now, updatedAt: now},
       };
     });
   }

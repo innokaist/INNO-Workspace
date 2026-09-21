@@ -1,0 +1,4 @@
+const count=v=>Number.isSafeInteger(v)&&v>=0?v:null;
+export function usageCounts(value){const inputTokens=count(value?.inputTokens),outputTokens=count(value?.outputTokens);return inputTokens===null&&outputTokens===null?null:{inputTokens,outputTokens};}
+export function executionUsage(owner,value,completedAt){const counts=usageCounts(value);if(!counts)return null;return {...counts,provider:owner.provider,executionId:owner.executionId,generation:owner.generation,completedAt,source:'executor_report'};}
+export function usageRows(tasks){return (tasks||[]).flatMap(t=>{const u=t.checkpoint?.usage,c=usageCounts(u);return c&&['codex','claude'].includes(u.provider)&&typeof u.executionId==='string'?[{taskId:t.id,title:t.title,provider:u.provider,completedAt:u.completedAt,...c}]:[];}).sort((a,b)=>String(b.completedAt).localeCompare(String(a.completedAt))).slice(0,50);}

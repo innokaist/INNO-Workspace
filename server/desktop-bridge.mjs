@@ -1,3 +1,4 @@
+import {usageCounts} from '../public/core/execution-usage.mjs';
 import {failureInput,runnerError} from '../public/core/failures.mjs';
 import {sanitizeMaterials} from '../public/core/tasks.mjs';
 export function createDesktopBridge({request,runner,outbox,heartbeatMs=15000,beforeClaim=async()=>{},onError=()=>{}}){
@@ -12,7 +13,7 @@ export function createDesktopBridge({request,runner,outbox,heartbeatMs=15000,bef
   finally{clearInterval(timer);if(renewal)await renewal;}
   if(monitorError)throw monitorError;
   if(controller.signal.aborted)throw Error('Desktop execution stopped');
-  const record={taskId:task.id,action:runError?'fail':'complete',input:runError?{...owner,...failureInput(runError.code?runError:runnerError(runError))}:{...owner,content:result.content,checkpoint:result.checkpoint,artifacts:result.artifacts}};
+  const record={taskId:task.id,action:runError?'fail':'complete',input:runError?{...owner,...failureInput(runError.code?runError:runnerError(runError))}:{...owner,content:result.content,checkpoint:result.checkpoint,artifacts:result.artifacts,usage:usageCounts(result.usage)}};
   outbox.write(record);await deliver(record);return true;
  }
  return {

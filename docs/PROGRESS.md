@@ -54,3 +54,7 @@ Task 4: GitHub source and Pages published, Cloudflare Worker/D1 deployed. Live a
 ## 2026-09-21 — Ledger 의존 제거
 
 사용자 요청에 따라 NanoLab 시료 + Prism 분석 직접 연결을 기본값으로 변경했다. Ledger는 선택한 경우에만 사용한다. 직접 실험 ID는 기존 Run ID와 구분한다. 가상 자료로 Ledger 없이 시료 선택·연결 확인·작업 준비 전달을 검증했다.
+
+## 2026-09-21 — 실행 사용량 전달
+
+데스크톱 브리지의 사용량 누락을 수정하고 SQLite/D1 결과 저장과 함께 checkpoint에 관측값을 기록한다. 재전송·취소·소유권 충돌 검증과 작업별 최근 실행 표시를 추가했다. 기존 로컬 실행의 소유권 확인 전 제공자 사용량 쓰기를 제거했다. 구독 잔여량과 전체 누적 집계는 별도 미완료 항목이다.

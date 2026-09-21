@@ -177,7 +177,7 @@ test('cancelling an in-flight run prevents its late result from overwriting the 
     run: async () => {
       start();
       await blocked;
-      return {content: 'late answer'};
+      return {content: 'late answer',usage:{inputTokens:99,outputTokens:1}};
     },
   };
   const app = await fixture({runners: {codex: runner}});
@@ -206,6 +206,7 @@ test('cancelling an in-flight run prevents its late result from overwriting the 
   const persisted = app.store.getTask(created.body.task.id);
   assert.equal(persisted.status, 'cancelled');
   assert.equal(JSON.stringify(persisted).includes('late answer'), false);
+  assert.deepEqual(app.store.getState().usage, []);
 });
 
 test('a new message during a run supersedes and blocks the stale result', async t => {
