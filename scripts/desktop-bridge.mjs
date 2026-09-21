@@ -1,3 +1,4 @@
+import {createModelCatalog} from '../server/model-routing.mjs';
 import {RunStorage} from '../server/run-storage.mjs';
 import {LocalRecords} from '../server/local-records.mjs';
 import {spawn} from 'node:child_process';
@@ -7,7 +8,7 @@ import {acquireBridgeLock,startupPortMessage,retryableStatus,checkRunStorage} fr
 import {readFileSync,writeFileSync,renameSync,unlinkSync,existsSync,mkdirSync,readdirSync,statSync} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {createCodexRunner} from '../server/runners.mjs';
+import {withoutApiEnvironment,createCodexRunner} from '../server/runners.mjs';
 import {createDesktopBridge} from '../server/desktop-bridge.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const privateDir=path.join(root,'.inno');mkdirSync(privateDir,{recursive:true});
@@ -25,7 +26,8 @@ if(process.platform==='win32'&&process.env.LOCALAPPDATA){
   if(installed.length)codexCommand=installed[0];
  }
 }
-const runner=createCodexRunner({spawnProcess:(command,args,options)=>spawn(command==='codex'?codexCommand:command,args,options),cwd:path.join(privateDir,'desktop-runs'),managedDelivery:true});
+const spawnCodex=(command,args,options)=>spawn(command==='codex'?codexCommand:command,args,options);
+const runner=createCodexRunner({spawnProcess:spawnCodex,modelCatalog:createModelCatalog({spawnProcess:spawnCodex,env:withoutApiEnvironment(),cwd:root}),cwd:path.join(privateDir,'desktop-runs'),managedDelivery:true});
 if(!await runner.available())throw Error('Sign in to Codex using your ChatGPT subscription before starting the desktop bridge.');
 let lock;try{lock=await acquireBridgeLock();}catch(error){const message=startupPortMessage(error);if(!message)throw error;console.error(message);process.exit(1);}
 const bridge=createDesktopBridge({request,runner,outbox,beforeClaim:()=>checkRunStorage(path.join(privateDir,'desktop-runs')),onError:e=>console.error(e.status?'INNO result delivery HTTP '+e.status:'INNO execution interrupted; saved results are retained.')});

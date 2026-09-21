@@ -1,10 +1,11 @@
+import {createModelCatalog} from './model-routing.mjs';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { localOnboardingUrl, readServerConfig } from './config.mjs';
 import { createInnoServer } from './http.mjs';
-import { createClaudeRoutineRunner, createCodexRunner } from './runners.mjs';
+import { createClaudeRoutineRunner, createCodexRunner, withoutApiEnvironment } from './runners.mjs';
 import { SqliteTaskStore } from './store.mjs';
 
 export async function startLocalServer({env = process.env, logger = console} = {}) {
@@ -16,6 +17,7 @@ export async function startLocalServer({env = process.env, logger = console} = {
   const runners = {
     codex: createCodexRunner({
       cwd: config.executorWorkspace,
+      modelCatalog: createModelCatalog({env:withoutApiEnvironment(env),cwd:config.executorWorkspace}),
       mcpUrl: () => localMcpUrl,
       mcpToken: config.token,
     }),

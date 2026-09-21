@@ -45,3 +45,5 @@ artifact_task의 artifact에는 name,mime,content를 넣고 바이너리는 enco
 INNO 시험 작업의 실행권으로 read_task → checkpoint_task → artifact_task → completed가 성공하고 같은 작업 화면에 답변이 표시되어야 전체 연결이 완료입니다. Routine의 세션 생성만으로 성공했다고 판단하지 않습니다.
 
 [Claude 공식 환경 자격 증명 안내](https://code.claude.com/docs/en/cloud-environments#add-api-credentials)
+
+모델 배정은 [MODEL-ROUTING.md](MODEL-ROUTING.md)를 따릅니다. 새 실행 payload에 제공되는 Claude 배정 계약은 위임 전 계획 체크포인트와 완료 후 별도 배정 보고서를 요구합니다. 저장소의 `.claude/agents` 정의를 사용하되 런타임 지원·치환 경고를 확인합니다. 기존 Routine의 마스터 모델과 인증은 유지합니다.

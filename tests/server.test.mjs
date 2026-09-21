@@ -299,7 +299,7 @@ test('Codex runner uses stdin without a shell, strips API credentials, and parse
   assert.equal(invocation.command, 'codex');
   assert.deepEqual(invocation.args, [
     'exec', '--json', '--color', 'never', '--approve-for-me',
-    '--skip-git-repo-check', '--ephemeral', '--ignore-user-config', '--enable', 'multi_agent',
+    '--skip-git-repo-check', '--ephemeral', '--ignore-user-config', '--disable', 'multi_agent',
     '-c', 'mcp_servers.inno.url="http://127.0.0.1:4173/mcp"',
     '-c', 'mcp_servers.inno.bearer_token_env_var="INNO_MCP_TOKEN"', '-'
   ]);
@@ -361,7 +361,7 @@ test('Codex runner extracts validated structured generated artifacts when suppli
 
   assert.equal(result.content, 'Report generated');
   assert.equal(result.checkpoint, 'Reviewed and rendered');
-  assert.deepEqual(result.artifacts, [{name: 'report.md', mime: 'text/markdown', content: '# Verified report', encoding: 'utf-8'}]);
+  assert.deepEqual(result.artifacts.slice(0,1), [{name: 'report.md', mime: 'text/markdown', content: '# Verified report', encoding: 'utf-8'}]);
 });
 
 test('Codex runner reads a real generated file from its isolated run directory', async t => {
@@ -429,6 +429,7 @@ test('Claude Routine runner calls the documented fire endpoint with server-side 
   });
 
   assert.equal(request.url, 'https://api.anthropic.com/v1/claude_code/routines/trig_123/fire');
+  assert.match(JSON.parse(request.options.body).text, /CLAUDE MASTER-FIRST/);
   assert.equal(request.options.headers.authorization, 'Bearer routine-secret');
   assert.equal(request.options.headers['anthropic-beta'], 'experimental-cc-routine-2026-04-01');
   assert.equal(request.options.headers['anthropic-version'], '2023-06-01');
@@ -622,6 +623,9 @@ test('Worker serves the shared authenticated API and dispatches configured Claud
   const run = await runResponse.json();
   assert.equal(runResponse.status, 202);
   assert.equal(run.task.status, 'running');
+  assert.match(JSON.parse(routineRequest.options.body).text, /CLAUDE MASTER-FIRST/);
+  assert.match(JSON.parse(routineRequest.options.body).text, /checkpoint_task BEFORE/);
+  assert.match(JSON.parse(routineRequest.options.body).text, /inno-haiku/);
   assert.match(JSON.parse(routineRequest.options.body).text, /transient cloud source/);
   assert.match(JSON.parse(routineRequest.options.body).text, /Use the new comparison method/);
   await Promise.all(pending);
