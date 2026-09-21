@@ -3,7 +3,7 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 
 const DEFAULT_URL='https://inno-workspace-api.innokaist.workers.dev/mcp';
-const TOOLS=new Set(['read_task','list_tasks','claim_execution','checkpoint_task','artifact_task','plan_task','request_decision']);
+const TOOLS=new Set(['read_task','list_tasks','claim_execution','checkpoint_task','artifact_task','plan_task','request_decision','handoff_task']);
 export function prepareRequest(tool,args={},endpoint=DEFAULT_URL){
  const url=new URL(endpoint);
  if(url.protocol!=='https:')throw new Error('MCP endpoint must use HTTPS');
@@ -49,3 +49,4 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1]
   const result=await callTool(tool,argumentsObject);process.stdout.write(JSON.stringify(result)+'\n');
  }catch(error){process.stderr.write(error.message+'\n');process.exitCode=1;}
 }
+

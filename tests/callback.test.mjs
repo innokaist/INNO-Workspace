@@ -24,4 +24,4 @@ test('callback stdin preserves Korean split across arbitrary pipe chunks',async(
  const value=await readArguments(Readable.from([data.subarray(0,start+1),data.subarray(start+1,start+2),data.subarray(start+2)]));
  assert.equal(value.content,'검증 완료');
  await assert.rejects(()=>readArguments(Readable.from([Buffer.alloc(750001,65)])),/750000/);
-});
+});test('cloud callback exposes the authenticated sequential handoff tool',()=>{assert.equal(JSON.parse(prepareRequest('handoff_task',{taskId:'t'}).input).params.name,'handoff_task');});
